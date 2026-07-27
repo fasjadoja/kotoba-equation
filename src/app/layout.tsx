@@ -30,11 +30,13 @@ export const metadata: Metadata = {
     title: "Formula Studio｜方程式・図解画像ジェネレーター",
     description:
       "四則演算で語る「思考の方程式」画像を数十秒で。Xでそのまま使える高画質PNGを無料生成。",
+    images: [{ url: "/og.png", width: 1200, height: 675 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "Formula Studio｜方程式・図解画像ジェネレーター",
     description: "四則演算の方程式画像を数十秒で作成。Xでそのまま使える高画質PNGを無料生成。",
+    images: ["/og.png"],
   },
   alternates: { canonical: siteUrl },
 };

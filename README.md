@@ -1,67 +1,58 @@
-# Formula Studio
+# formula.studio
 
-「人生の成果 ＝ 能力 × 熱量 × 考え方」のような**四則演算の方程式画像**をブラウザだけで作成し、X / Instagram にそのまま投稿できる高画質PNGを書き出すジェネレーターです。
+四則演算で思考を1枚の画像にする、無料のジェネレーター。
+「人生の成果 ＝ 能力 × 熱量 × 考え方」のような思考式を、X / note / Instagram 向けの画像として書き出せます。
 
-無料で使えるツールで集客し、**買い切りのProライセンス**（＋任意で広告）で収益化する構成になっています。
+- すべての機能が無料。ログイン・回数制限・広告なし
+- 収益は任意の寄付（Buy Me a Coffee など）のみ
+- 画像生成も履歴保存もブラウザ内で完結（サーバーに送信しない）
 
-## 収益モデル
+## 機能
 
-| | Free | Pro（買い切り） |
-| --- | --- | --- |
-| 画像生成・ダウンロード | 無制限 | 無制限 |
-| テーマ | 2種 | 6種すべて |
-| サイズ | 16:9 | 16:9 / 1:1 / 4:5 |
-| 解像度 | 等倍（1200px） | 2倍（2400px） |
-| テンプレート | 5種 | 12種すべて |
-| 透かし | あり | なし |
+| | |
+| --- | --- |
+| サイズ | X 横長 1200×675 / 正方形 1080×1080 / note 1280×670 |
+| 書き出し | 2倍解像度のPNG保存、クリップボードコピー |
+| 共有 | 「画像を保存してXでシェア」でダウンロードとX投稿画面を同時に起動 |
+| 履歴 | 直近5件を localStorage に保存し、ワンクリックで復元 |
+| テーマ | ライト / ダーク、ロゴ表示のON/OFF |
+| テンプレート | 12種のプリセット |
 
-- 決済は Stripe Checkout（買い切り・サブスク管理不要）。
-- ライセンスキーは **HMAC署名付きのキー**で、DB不要で検証できます（`src/lib/license.ts`）。
-- 広告は `NEXT_PUBLIC_ADSENSE_CLIENT` を設定したときだけ AdSense タグを読み込みます。
+### レイアウト崩れ対策
+
+`src/lib/render.ts` が描画のすべてを担当します。文字数や要素数が増えても崩れないよう、次を実装しています。
+
+- 見出し・補足は禁則処理つきの文字単位で折り返し
+- 方程式は「演算子＋要素」を1グループとして行送りするため、行末に演算子が取り残されない
+- 1要素が1行に収まらない場合のみ、その要素を文字単位で分割
+- 全ブロックの合計高さが収まるまで基準サイズを段階的に縮小し、上下中央に再配置
+- 補足と「＝」には最小サイズを設定し、縮小しても読めるサイズを維持
 
 ## セットアップ
 
 ```bash
 npm install
-cp .env.example .env.local   # 値を設定
-npm run dev                  # http://localhost:3000
+cp .env.example .env.local   # 必要な値を設定
+npm run dev
 ```
 
-Stripe / ライセンス鍵が未設定でも、無料機能（画像生成・ダウンロード）はそのまま動作します。購入ボタンは「準備中」を返します。
+| 環境変数 | 用途 |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | 公開URL（OGP・sitemap・canonical に使用） |
+| `NEXT_PUBLIC_DONATE_URL` | 寄付ページのURL。未設定なら寄付リンクは表示されません |
+| `NEXT_PUBLIC_CONTACT_URL` | 問い合わせ先URL（任意） |
 
-## デプロイ（Vercel想定）
+## デプロイ
 
-1. このリポジトリを GitHub にプッシュし、Vercel で Import。
-2. Vercel の Environment Variables に `.env.example` の値を設定。
-   - `LICENSE_SECRET` は `openssl rand -hex 32` で生成した値を使用（**変更すると発行済みライセンスが無効になります**）。
-3. 独自ドメインを割り当て、`NEXT_PUBLIC_SITE_URL` をそのドメインに設定。
-4. Stripe ダッシュボードで本番APIキーを取得し `STRIPE_SECRET_KEY` に設定。
-
-## Stripe の設定
-
-- 商品：`Formula Studio Pro`（一回払い / JPY）
-- `STRIPE_PRICE_ID` を設定するとその Price を使用。未設定なら `PRO_PRICE_JPY` の金額で都度作成します。
-- 購入完了後、`/success?session_id=...` で決済を検証し、その場でライセンスキーを発行・自動有効化します（Webhook不要）。
-
-## 公開前チェックリスト
-
-- [ ] `/legal/tokushoho` の事業者名・住所・電話番号を実際の情報に差し替え（特定商取引法の表示義務）
-- [ ] `NEXT_PUBLIC_SUPPORT_EMAIL` を実在のアドレスに設定
-- [ ] `LICENSE_SECRET` を本番用に生成して設定
-- [ ] Google Search Console にサイトを登録（`/sitemap.xml` を送信）
-- [ ] AdSense を使う場合は審査通過後に `NEXT_PUBLIC_ADSENSE_CLIENT` を設定
+1. Vercel でこのリポジトリをインポート
+2. 上記の環境変数を設定
+3. デプロイ後、Google Search Console に `https://<ドメイン>/sitemap.xml` を送信
 
 ## 主なディレクトリ
 
 ```
-src/
-  app/                  ページ・APIルート
-    api/checkout        Stripe Checkout セッション作成
-    api/license/issue   決済検証＋ライセンス発行
-    api/license/verify  ライセンス検証
-  components/Editor.tsx エディタUI（Canvasプレビュー）
-  lib/render.ts         Canvas描画（無料/Pro共通のレンダラ）
-  lib/presets.ts        テンプレート
-  lib/themes.ts         テーマ
-  lib/license.ts        HMACライセンス
+src/app          ページ（トップ / 利用規約 / プライバシー / sitemap / robots）
+src/components   Editor（UI）
+src/lib          render.ts（描画エンジン）, presets.ts, themes.ts, types.ts, site.ts
+src/hooks        useHistory.ts（localStorage 履歴）
 ```

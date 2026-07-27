@@ -7,22 +7,24 @@ export type FormulaElement = {
   text: string;
 };
 
-export type AspectId = "16:9" | "1:1" | "4:5";
+export type SizeId = "x" | "square" | "note";
 
-export type Aspect = {
-  id: AspectId;
+export type CanvasSize = {
+  id: SizeId;
   label: string;
-  hint: string;
   width: number;
   height: number;
-  pro: boolean;
 };
 
-export const ASPECTS: Aspect[] = [
-  { id: "16:9", label: "16:9", hint: "X / ブログ", width: 1200, height: 675, pro: false },
-  { id: "1:1", label: "1:1", hint: "Instagram", width: 1080, height: 1080, pro: true },
-  { id: "4:5", label: "4:5", hint: "縦長・保存されやすい", width: 1080, height: 1350, pro: true },
+export const SIZES: CanvasSize[] = [
+  { id: "x", label: "X 横長", width: 1200, height: 675 },
+  { id: "square", label: "正方形", width: 1080, height: 1080 },
+  { id: "note", label: "note", width: 1280, height: 670 },
 ];
+
+export function getSize(id: SizeId): CanvasSize {
+  return SIZES.find((s) => s.id === id) ?? SIZES[0];
+}
 
 export type FormulaConfig = {
   resultText: string;
@@ -30,9 +32,11 @@ export type FormulaConfig = {
   subNote: string;
   author: string;
   themeId: string;
-  aspectId: AspectId;
+  sizeId: SizeId;
   showWatermark: boolean;
 };
+
+export const MAX_ELEMENTS = 8;
 
 export const DEFAULT_CONFIG: FormulaConfig = {
   resultText: "人生の成果",
@@ -44,6 +48,6 @@ export const DEFAULT_CONFIG: FormulaConfig = {
   subNote: "※考え方（-100〜+100点）が全体の掛け算を決める",
   author: "@your_account",
   themeId: "light",
-  aspectId: "16:9",
+  sizeId: "x",
   showWatermark: true,
 };

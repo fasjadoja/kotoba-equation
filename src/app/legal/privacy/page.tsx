@@ -1,49 +1,35 @@
 import type { Metadata } from "next";
-import { SITE } from "@/lib/site";
+import LegalPage from "../LegalPage";
 
 export const metadata: Metadata = { title: "プライバシーポリシー" };
 
-const SECTIONS: { title: string; body: string[] }[] = [
+const SECTIONS = [
   {
-    title: "取得する情報",
+    title: "1. 入力内容の取り扱い",
     body: [
-      "本サービスで入力したテキストや生成した画像は、すべて利用者のブラウザ内で処理され、当方のサーバーに送信・保存されることはありません。",
-      "Proライセンスの購入時には、決済代行事業者である Stripe がメールアドレス・決済情報を取得します。当方はカード情報を保持しません。",
+      "本サービスで入力したテキストおよび生成した画像は、すべて利用者のブラウザ内で処理されます。運営者のサーバーに送信・保存されることはありません。",
     ],
   },
   {
-    title: "アクセス解析・広告",
+    title: "2. ローカルストレージ",
     body: [
-      "本サービスでは、サービス改善のためアクセス解析ツールを利用する場合があります。これらは Cookie を使用して匿名の利用状況を収集します。",
-      "第三者配信の広告サービス（Google AdSense 等）を利用する場合、Cookie を用いて利用者の興味に応じた広告が配信されることがあります。ブラウザ設定により Cookie を無効化できます。",
+      "直近5件の作成履歴を、利用者のブラウザのローカルストレージに保存します。これは利用者の端末内にのみ保存され、運営者が参照することはできません。ブラウザの設定からいつでも削除できます。",
     ],
   },
   {
-    title: "第三者提供",
-    body: ["法令に基づく場合を除き、取得した情報を第三者に提供することはありません。"],
+    title: "3. アクセス解析",
+    body: [
+      "サービス改善のためアクセス解析ツールを利用する場合があります。取得する情報は個人を特定しない統計情報に限られます。",
+    ],
   },
   {
-    title: "お問い合わせ",
-    body: [`本ポリシーに関するお問い合わせは ${SITE.email} までご連絡ください。`],
+    title: "4. 外部サービス",
+    body: [
+      "寄付ページ（Buy Me a Coffee 等）およびXへの共有では、遷移先の各サービスのプライバシーポリシーが適用されます。決済情報を運営者が取得することはありません。",
+    ],
   },
 ];
 
 export default function PrivacyPage() {
-  return (
-    <main className="mx-auto max-w-3xl px-4 py-16">
-      <h1 className="text-2xl font-bold">プライバシーポリシー</h1>
-      <div className="mt-8 space-y-8">
-        {SECTIONS.map((section) => (
-          <section key={section.title}>
-            <h2 className="font-semibold text-slate-900">{section.title}</h2>
-            {section.body.map((paragraph) => (
-              <p key={paragraph} className="mt-2 text-sm leading-relaxed text-slate-600">
-                {paragraph}
-              </p>
-            ))}
-          </section>
-        ))}
-      </div>
-    </main>
-  );
+  return <LegalPage title="プライバシーポリシー" sections={SECTIONS} />;
 }

@@ -8,6 +8,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: base, lastModified, priority: 1 },
     { url: `${base}/legal/terms`, lastModified, priority: 0.3 },
     { url: `${base}/legal/privacy`, lastModified, priority: 0.3 },
-    { url: `${base}/legal/tokushoho`, lastModified, priority: 0.3 },
   ];
 }

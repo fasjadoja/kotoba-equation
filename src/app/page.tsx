@@ -1,148 +1,102 @@
 import Editor from "@/components/Editor";
-import { FREE_FEATURES, PRO_FEATURES, PRO_PRICE_LABEL } from "@/lib/plan";
+import { SITE } from "@/lib/site";
 
 const FAQ = [
   {
     q: "無料で使えますか？",
-    a: "はい。方程式画像の作成とダウンロードは無料で無制限に行えます。無料版の画像には Formula Studio の透かしが入ります。",
+    a: "はい。すべての機能を無料で、回数制限なく使えます。気に入ったら開発者にコーヒーを1杯おごってください。",
   },
   {
-    q: "作った画像を商用利用できますか？",
-    a: "できます。生成した画像の著作権は利用者に帰属し、SNS投稿・note・スライド・広告など用途の制限はありません。",
+    q: "作った画像は商用利用できますか？",
+    a: "できます。X・note・ブログ・資料など、用途の制限はありません。クレジット表記も任意です。",
   },
   {
-    q: "Proは月額ですか？",
-    a: `いいえ。${PRO_PRICE_LABEL}の買い切りです。購入後に発行されるライセンスキーを入力すると、透かし削除・全テーマ・全サイズ・2倍解像度が解放されます。`,
-  },
-  {
-    q: "入力した内容はサーバーに送信されますか？",
-    a: "送信されません。画像はすべてブラウザ内（Canvas）で生成しており、テキストや画像がサーバーに保存されることはありません。",
+    q: "入力した内容はサーバーに送られますか？",
+    a: "送られません。画像の生成も履歴の保存もすべてブラウザ内で完結します。",
   },
 ];
 
 export default function Home() {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "WebApplication",
-    name: "Formula Studio",
-    applicationCategory: "DesignApplication",
-    operatingSystem: "Web",
-    description:
-      "四則演算の「思考の方程式」画像をブラウザだけで作成できるジェネレーター。X・Instagram向けの高画質PNGを無料で書き出せます。",
-    offers: [
-      { "@type": "Offer", price: "0", priceCurrency: "JPY", name: "Free" },
+    "@graph": [
       {
-        "@type": "Offer",
-        price: String(PRO_PRICE_LABEL.replace(/[^\d]/g, "")),
-        priceCurrency: "JPY",
-        name: "Pro（買い切り）",
+        "@type": "WebApplication",
+        name: SITE.name,
+        url: SITE.url,
+        applicationCategory: "DesignApplication",
+        operatingSystem: "Web",
+        offers: { "@type": "Offer", price: "0", priceCurrency: "JPY" },
+        description:
+          "四則演算で思考を表す方程式画像を無料で作成できるジェネレーター。X・note向けのサイズに対応。",
+      },
+      {
+        "@type": "FAQPage",
+        mainEntity: FAQ.map((item) => ({
+          "@type": "Question",
+          name: item.q,
+          acceptedAnswer: { "@type": "Answer", text: item.a },
+        })),
       },
     ],
-    mainEntity: {
-      "@type": "FAQPage",
-      mainEntity: FAQ.map((item) => ({
-        "@type": "Question",
-        name: item.q,
-        acceptedAnswer: { "@type": "Answer", text: item.a },
-      })),
-    },
   };
 
   return (
-    <main>
+    <div className="mx-auto max-w-5xl px-6 pb-24 pt-10">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <div className="mx-auto max-w-6xl px-4 pt-12">
-        <header className="mb-10 text-center">
-          <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-600 text-xl font-bold text-white shadow-lg shadow-blue-600/20">
-            ×
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-            思考の方程式を、そのまま画像に。
+      <header className="mb-10 flex items-baseline justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold tracking-tight text-neutral-900">formula.studio</p>
+          <h1 className="mt-1 text-xs text-neutral-400">
+            四則演算で思考を1枚の画像にする、無料のジェネレーター
           </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            「成果 ＝ 能力 × 熱量 × 考え方」——バズる四則演算フレームワーク画像を数十秒で作成。登録不要・無料。
-          </p>
-        </header>
+        </div>
+        {SITE.donateUrl && (
+          <a
+            href={SITE.donateUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 border border-neutral-200 px-3 py-1.5 text-xs text-neutral-500 transition hover:border-neutral-900 hover:text-neutral-900"
+          >
+            ☕ コーヒーをおごる
+          </a>
+        )}
+      </header>
 
-        <Editor />
+      <Editor />
 
-        <section className="mt-20" id="features">
-          <h2 className="text-center text-xl font-bold">なぜ方程式画像は伸びるのか</h2>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              {
-                title: "一目で理解できる",
-                body: "長い文章より、掛け算1本のほうが速く伝わる。タイムラインで指を止めさせます。",
-              },
-              {
-                title: "保存・引用されやすい",
-                body: "「考え方の型」は保存され、引用RTで二次拡散します。フォロワー獲得の起点になります。",
-              },
-              {
-                title: "アカウント名が残る",
-                body: "画像内にクレジットを入れられるので、拡散されるほど発信者の名前が広がります。",
-              },
-            ].map((item) => (
-              <div key={item.title} className="rounded-xl border border-slate-200 bg-white p-5">
-                <h3 className="mb-1.5 font-semibold text-slate-900">{item.title}</h3>
-                <p className="text-sm leading-relaxed text-slate-600">{item.body}</p>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-20" id="pricing">
-          <h2 className="text-center text-xl font-bold">料金</h2>
-          <p className="mt-1 text-center text-sm text-slate-500">
-            まずは無料で。物足りなくなったら買い切りのProへ。
-          </p>
-          <div className="mx-auto mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-6">
-              <h3 className="font-semibold">Free</h3>
-              <p className="mt-1 text-3xl font-bold">¥0</p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-600">
-                {FREE_FEATURES.map((feature) => (
-                  <li key={feature} className="flex gap-2">
-                    <span className="text-slate-400">・</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+      <section className="mt-24 border-t border-neutral-100 pt-10">
+        <h2 className="mb-6 text-[11px] uppercase tracking-[0.18em] text-neutral-400">FAQ</h2>
+        <dl className="max-w-2xl space-y-5">
+          {FAQ.map((item) => (
+            <div key={item.q}>
+              <dt className="text-sm text-neutral-900">{item.q}</dt>
+              <dd className="mt-1 text-sm leading-relaxed text-neutral-500">{item.a}</dd>
             </div>
-            <div className="rounded-2xl border-2 border-blue-600 bg-white p-6 shadow-lg shadow-blue-600/10">
-              <h3 className="font-semibold text-blue-700">Pro（買い切り）</h3>
-              <p className="mt-1 text-3xl font-bold">{PRO_PRICE_LABEL}</p>
-              <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                {PRO_FEATURES.map((feature) => (
-                  <li key={feature} className="flex gap-2">
-                    <span className="text-emerald-500">✓</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </section>
+          ))}
+        </dl>
+      </section>
 
-        <section className="mx-auto mt-20 max-w-3xl" id="faq">
-          <h2 className="text-center text-xl font-bold">よくある質問</h2>
-          <div className="mt-8 space-y-3">
-            {FAQ.map((item) => (
-              <details
-                key={item.q}
-                className="rounded-xl border border-slate-200 bg-white p-5 [&_summary]:cursor-pointer"
-              >
-                <summary className="font-medium text-slate-900">{item.q}</summary>
-                <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.a}</p>
-              </details>
-            ))}
-          </div>
+      {SITE.donateUrl && (
+        <section className="mt-16 max-w-2xl border-t border-neutral-100 pt-10">
+          <p className="text-sm leading-relaxed text-neutral-500">
+            このツールは無料で公開しています。広告も、ログインも、有料プランもありません。
+            続けられるかどうかは、使ってくれた方の気持ち次第です。
+          </p>
+          <a
+            href={SITE.donateUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-block border border-neutral-900 px-4 py-2 text-sm text-neutral-900 transition hover:bg-neutral-900 hover:text-white"
+          >
+            ☕ 開発者にコーヒーをおごる
+          </a>
         </section>
-      </div>
-    </main>
+      )}
+    </div>
   );
 }

@@ -7,7 +7,6 @@ export type Preset = {
   resultText: string;
   subNote: string;
   elements: FormulaElement[];
-  pro: boolean;
 };
 
 export const PRESETS: Preset[] = [
@@ -22,7 +21,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "熱量" },
       { op: "×", text: "考え方" },
     ],
-    pro: false,
   },
   {
     id: "sales",
@@ -35,7 +33,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "顧客単価" },
       { op: "×", text: "購買頻度" },
     ],
-    pro: false,
   },
   {
     id: "habit",
@@ -48,7 +45,6 @@ export const PRESETS: Preset[] = [
       { op: "＋", text: "環境づくり" },
       { op: "−", text: "無駄な迷い" },
     ],
-    pro: false,
   },
   {
     id: "trust",
@@ -62,7 +58,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "親密さ" },
       { op: "÷", text: "自己利益" },
     ],
-    pro: false,
   },
   {
     id: "growth",
@@ -75,7 +70,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "振り返りの質" },
       { op: "×", text: "継続月数" },
     ],
-    pro: false,
   },
   {
     id: "sns",
@@ -89,7 +83,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "共感" },
       { op: "×", text: "投稿頻度" },
     ],
-    pro: true,
   },
   {
     id: "lp",
@@ -102,7 +95,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "証拠" },
       { op: "÷", text: "申込の摩擦" },
     ],
-    pro: true,
   },
   {
     id: "value",
@@ -116,7 +108,6 @@ export const PRESETS: Preset[] = [
       { op: "÷", text: "かかる時間" },
       { op: "÷", text: "労力と犠牲" },
     ],
-    pro: true,
   },
   {
     id: "money",
@@ -130,7 +121,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "運用利回り" },
       { op: "×", text: "時間" },
     ],
-    pro: true,
   },
   {
     id: "career",
@@ -143,7 +133,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "人的資産" },
       { op: "×", text: "業界の生産性" },
     ],
-    pro: true,
   },
   {
     id: "team",
@@ -156,7 +145,6 @@ export const PRESETS: Preset[] = [
       { op: "×", text: "連携" },
       { op: "×", text: "方向性の一致" },
     ],
-    pro: true,
   },
   {
     id: "action",
@@ -169,7 +157,6 @@ export const PRESETS: Preset[] = [
       { op: "−", text: "不安" },
       { op: "⇒", text: "とりあえず着手" },
     ],
-    pro: true,
   },
 ];
 

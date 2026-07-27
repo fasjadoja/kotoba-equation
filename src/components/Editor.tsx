@@ -3,179 +3,209 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PRESETS, type Preset } from "@/lib/presets";
 import { THEMES } from "@/lib/themes";
-import { drawFormula, getAspect, renderToBlob } from "@/lib/render";
+import { drawFormula, renderToBlob } from "@/lib/render";
 import {
-  ASPECTS,
   DEFAULT_CONFIG,
+  MAX_ELEMENTS,
   OPERATORS,
-  type AspectId,
+  SIZES,
+  getSize,
   type FormulaConfig,
   type Operator,
+  type SizeId,
 } from "@/lib/types";
-import { useLicense } from "@/hooks/useLicense";
-import UpgradeDialog from "@/components/UpgradeDialog";
-
-const MAX_ELEMENTS = 6;
+import { SHARE_HASHTAGS } from "@/lib/site";
+import { useHistory, type HistoryEntry } from "@/hooks/useHistory";
 
 export default function Editor() {
-  const { isPro, checking, activate, deactivate } = useLicense();
   const [config, setConfig] = useState<FormulaConfig>(DEFAULT_CONFIG);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { entries, save, clear, summarize } = useHistory();
 
-  const aspect = useMemo(() => getAspect(config.aspectId), [config.aspectId]);
-  const effectiveConfig = useMemo<FormulaConfig>(
-    () => ({ ...config, showWatermark: isPro ? config.showWatermark : true }),
-    [config, isPro],
-  );
+  const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.width = aspect.width;
-    canvas.height = aspect.height;
+    canvas.width = size.width;
+    canvas.height = size.height;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    drawFormula(ctx, effectiveConfig, aspect.width, aspect.height);
-  }, [effectiveConfig, aspect]);
+    drawFormula(ctx, config, size.width, size.height);
+  }, [config, size]);
 
   useEffect(() => {
     if (!status) return;
-    const timer = window.setTimeout(() => setStatus(null), 4000);
+    const timer = window.setTimeout(() => setStatus(null), 3500);
     return () => window.clearTimeout(timer);
   }, [status]);
 
-  const requirePro = useCallback(() => {
-    setUpgradeOpen(true);
+  const update = useCallback((patch: Partial<FormulaConfig>) => {
+    setConfig((previous) => ({ ...previous, ...patch }));
   }, []);
 
   const applyPreset = (preset: Preset) => {
-    if (preset.pro && !isPro) {
-      requirePro();
-      return;
-    }
-    setConfig((prev) => ({
-      ...prev,
+    update({
       resultText: preset.resultText,
       subNote: preset.subNote,
-      elements: preset.elements.map((e) => ({ ...e })),
-    }));
+      elements: preset.elements.map((element) => ({ ...element })),
+    });
+  };
+
+  const restore = (entry: HistoryEntry) => {
+    update({
+      resultText: entry.resultText,
+      subNote: entry.subNote,
+      author: entry.author,
+      elements: entry.elements.map((element) => ({ ...element })),
+    });
+    setHistoryOpen(false);
+    setStatus("履歴から復元しました");
   };
 
   const updateElement = (index: number, patch: Partial<{ op: Operator | ""; text: string }>) => {
-    setConfig((prev) => ({
-      ...prev,
-      elements: prev.elements.map((el, i) => (i === index ? { ...el, ...patch } : el)),
+    setConfig((previous) => ({
+      ...previous,
+      elements: previous.elements.map((element, i) =>
+        i === index ? { ...element, ...patch } : element,
+      ),
     }));
   };
 
   const addElement = () => {
-    setConfig((prev) =>
-      prev.elements.length >= MAX_ELEMENTS
-        ? prev
-        : { ...prev, elements: [...prev.elements, { op: "×", text: "" }] },
+    setConfig((previous) =>
+      previous.elements.length >= MAX_ELEMENTS
+        ? previous
+        : { ...previous, elements: [...previous.elements, { op: "×", text: "" }] },
     );
   };
 
   const removeElement = (index: number) => {
-    setConfig((prev) => {
-      const elements = prev.elements.filter((_, i) => i !== index);
+    setConfig((previous) => {
+      const elements = previous.elements.filter((_, i) => i !== index);
       if (elements.length > 0) elements[0] = { ...elements[0], op: "" };
-      return { ...prev, elements };
+      return { ...previous, elements };
     });
   };
 
-  const download = async (scale: number) => {
-    if (scale > 1 && !isPro) {
-      requirePro();
-      return;
-    }
-    const blob = await renderToBlob(effectiveConfig, scale);
-    if (!blob) return;
+  const downloadImage = async () => {
+    const blob = await renderToBlob(config);
+    if (!blob) return false;
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `${config.resultText || "formula"}_formula.png`;
+    link.download = `${config.resultText || "formula"}.png`;
     link.click();
     URL.revokeObjectURL(link.href);
-    setStatus("画像をダウンロードしました");
+    save(config);
+    return true;
   };
 
-  const copyToClipboard = async () => {
-    const blob = await renderToBlob(effectiveConfig, 1);
+  const formulaText = () =>
+    config.elements
+      .map((element, index) => (index === 0 ? element.text : `${element.op} ${element.text}`))
+      .join(" ");
+
+  const handleDownload = async () => {
+    const ok = await downloadImage();
+    setStatus(ok ? "画像を保存しました" : "画像を生成できませんでした");
+  };
+
+  const handleShare = async () => {
+    const text = `${config.resultText} ＝ ${formulaText()}${
+      config.subNote ? `\n\n${config.subNote}` : ""
+    }`;
+    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
+      text,
+    )}&hashtags=${encodeURIComponent(SHARE_HASHTAGS.join(","))}`;
+    const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
+    const ok = await downloadImage();
+    if (!shareWindow) {
+      setStatus("ポップアップがブロックされました。保存した画像を手動で投稿してください");
+      return;
+    }
+    setStatus(ok ? "画像を保存しました。Xの投稿画面に貼り付けてください" : null);
+  };
+
+  const handleCopy = async () => {
+    const blob = await renderToBlob(config);
     if (!blob) return;
     try {
       await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
-      setStatus("画像をコピーしました。Xの投稿欄に貼り付けできます");
+      save(config);
+      setStatus("画像をコピーしました");
     } catch {
-      setStatus("このブラウザではコピーできません。ダウンロードをご利用ください");
+      setStatus("このブラウザではコピーできません。保存をご利用ください");
     }
   };
 
-  const shareOnX = () => {
-    const formula = config.elements
-      .map((el, i) => (i === 0 ? el.text : `${el.op} ${el.text}`))
-      .join(" ");
-    const text = `${config.resultText} ＝ ${formula}\n\n${config.subNote}`;
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
-
   return (
-    <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
-      <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-500">
-            テンプレート
-          </h2>
-          {!checking &&
-            (isPro ? (
+    <div className="grid gap-10 lg:grid-cols-[1fr_340px] lg:items-start">
+      <div className="space-y-3">
+        <canvas ref={canvasRef} className="h-auto w-full border border-neutral-200" />
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-neutral-400">
+          <span>
+            {size.width} × {size.height}px（書き出しは2倍解像度）
+          </span>
+          {status && <span className="text-neutral-900">{status}</span>}
+        </div>
+
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button
+            onClick={() => void handleShare()}
+            className="flex-1 border border-neutral-900 bg-neutral-900 px-4 py-3 text-sm font-medium text-white transition hover:bg-neutral-700"
+          >
+            画像を保存してXでシェア
+          </button>
+          <button
+            onClick={() => void handleDownload()}
+            className="border border-neutral-300 px-4 py-3 text-sm text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+          >
+            保存のみ
+          </button>
+          <button
+            onClick={() => void handleCopy()}
+            className="border border-neutral-300 px-4 py-3 text-sm text-neutral-700 transition hover:border-neutral-900 hover:text-neutral-900"
+          >
+            コピー
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-7 text-sm">
+        <Section label="サイズ">
+          <div className="flex gap-2">
+            {SIZES.map((item) => (
               <button
-                onClick={deactivate}
-                className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700"
+                key={item.id}
+                onClick={() => update({ sizeId: item.id as SizeId })}
+                className={`flex-1 border px-2 py-2 text-xs transition ${
+                  config.sizeId === item.id
+                    ? "border-neutral-900 text-neutral-900"
+                    : "border-neutral-200 text-neutral-400 hover:border-neutral-400"
+                }`}
               >
-                PRO 有効
-              </button>
-            ) : (
-              <button
-                onClick={requirePro}
-                className="rounded-full bg-blue-600 px-3 py-1 text-xs font-semibold text-white hover:bg-blue-700"
-              >
-                Proにする
+                {item.label}
+                <span className="mt-0.5 block text-[10px] text-neutral-400">
+                  {item.width}×{item.height}
+                </span>
               </button>
             ))}
-        </div>
+          </div>
+        </Section>
 
-        <div className="mb-6 flex flex-wrap gap-2">
-          {PRESETS.map((preset) => {
-            const locked = preset.pro && !isPro;
-            return (
-              <button
-                key={preset.id}
-                onClick={() => applyPreset(preset)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-                  locked
-                    ? "border-slate-200 bg-slate-50 text-slate-400 hover:border-blue-300 hover:text-blue-600"
-                    : "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900"
-                }`}
-                title={locked ? "Pro限定テンプレート" : preset.label}
-              >
-                {locked ? `🔒 ${preset.label}` : preset.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <Field label="① 結果（＝の左側）">
+        <Section label="結果">
           <input
             type="text"
             value={config.resultText}
-            onChange={(e) => setConfig({ ...config, resultText: e.target.value })}
+            onChange={(e) => update({ resultText: e.target.value })}
             className={inputClass}
+            placeholder="人生の成果"
           />
-        </Field>
+        </Section>
 
-        <Field label="② 方程式の要素">
+        <Section label="要素">
           <div className="space-y-2">
             {config.elements.map((element, index) => (
               <div key={index} className="flex items-center gap-2">
@@ -183,7 +213,8 @@ export default function Editor() {
                   <select
                     value={element.op}
                     onChange={(e) => updateElement(index, { op: e.target.value as Operator })}
-                    className={`${fieldBaseClass} w-[72px] shrink-0`}
+                    aria-label={`要素 ${index + 1} の演算子`}
+                    className={`${fieldClass} w-14 shrink-0 px-2 text-center`}
                   >
                     {OPERATORS.map((op) => (
                       <option key={op} value={op}>
@@ -192,186 +223,149 @@ export default function Editor() {
                     ))}
                   </select>
                 ) : (
-                  <div className="w-[72px] shrink-0" />
+                  <span className="w-14 shrink-0" />
                 )}
                 <input
                   type="text"
                   value={element.text}
                   placeholder={`要素 ${index + 1}`}
                   onChange={(e) => updateElement(index, { text: e.target.value })}
-                  className={`${fieldBaseClass} min-w-0 flex-1`}
+                  className={`${fieldClass} min-w-0 flex-1`}
                 />
-                {config.elements.length > 1 && (
-                  <button
-                    onClick={() => removeElement(index)}
-                    aria-label={`要素 ${index + 1} を削除`}
-                    className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-400 transition hover:border-red-300 hover:bg-red-50 hover:text-red-500"
-                  >
-                    ✕
-                  </button>
-                )}
+                <button
+                  onClick={() => removeElement(index)}
+                  disabled={config.elements.length <= 1}
+                  aria-label={`要素 ${index + 1} を削除`}
+                  className="w-7 shrink-0 text-neutral-300 transition hover:text-neutral-900 disabled:invisible"
+                >
+                  ×
+                </button>
               </div>
             ))}
           </div>
           {config.elements.length < MAX_ELEMENTS && (
             <button
               onClick={addElement}
-              className="mt-2 w-full rounded-md border border-dashed border-slate-300 bg-slate-50 py-2.5 text-sm font-medium text-slate-500 transition hover:border-slate-400 hover:text-slate-800"
+              className="mt-2 w-full border border-dashed border-neutral-200 py-2 text-xs text-neutral-400 transition hover:border-neutral-400 hover:text-neutral-700"
             >
-              + 要素を追加
+              要素を追加
             </button>
           )}
-        </Field>
+        </Section>
 
-        <Field label="③ 補足メッセージ">
+        <Section label="補足">
           <input
             type="text"
             value={config.subNote}
-            onChange={(e) => setConfig({ ...config, subNote: e.target.value })}
+            onChange={(e) => update({ subNote: e.target.value })}
             className={inputClass}
+            placeholder="※補足メッセージ"
           />
-        </Field>
+        </Section>
 
-        <Field label="④ アカウント名 / クレジット">
+        <Section label="クレジット">
           <input
             type="text"
             value={config.author}
-            onChange={(e) => setConfig({ ...config, author: e.target.value })}
+            onChange={(e) => update({ author: e.target.value })}
             className={inputClass}
+            placeholder="@your_account"
           />
-        </Field>
+        </Section>
 
-        <Field label="⑤ テーマ">
-          <div className="flex flex-wrap gap-2">
-            {THEMES.map((theme) => {
-              const locked = theme.pro && !isPro;
-              const active = config.themeId === theme.id;
-              return (
-                <button
-                  key={theme.id}
-                  onClick={() =>
-                    locked ? requirePro() : setConfig({ ...config, themeId: theme.id })
-                  }
-                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-                    active
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                >
-                  <span
-                    className="h-3.5 w-3.5 rounded-full border border-slate-300"
-                    style={{ background: theme.background }}
-                  />
-                  {locked ? `🔒 ${theme.name}` : theme.name}
-                </button>
-              );
-            })}
+        <Section label="テーマ">
+          <div className="flex items-center gap-2">
+            {THEMES.map((theme) => (
+              <button
+                key={theme.id}
+                onClick={() => update({ themeId: theme.id })}
+                className={`flex-1 border px-3 py-2 text-xs transition ${
+                  config.themeId === theme.id
+                    ? "border-neutral-900 text-neutral-900"
+                    : "border-neutral-200 text-neutral-400 hover:border-neutral-400"
+                }`}
+              >
+                {theme.name}
+              </button>
+            ))}
           </div>
-        </Field>
+          <label className="mt-3 flex items-center gap-2 text-xs text-neutral-500">
+            <input
+              type="checkbox"
+              checked={config.showWatermark}
+              onChange={(e) => update({ showWatermark: e.target.checked })}
+              className="h-3.5 w-3.5 accent-neutral-900"
+            />
+            ロゴを表示する
+          </label>
+        </Section>
 
-        <Field label="⑥ サイズ">
-          <div className="flex flex-wrap gap-2">
-            {ASPECTS.map((item) => {
-              const locked = item.pro && !isPro;
-              const active = config.aspectId === item.id;
-              return (
-                <button
-                  key={item.id}
-                  onClick={() =>
-                    locked
-                      ? requirePro()
-                      : setConfig({ ...config, aspectId: item.id as AspectId })
-                  }
-                  className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
-                    active
-                      ? "border-blue-500 bg-blue-50 text-blue-700"
-                      : "border-slate-200 text-slate-600 hover:border-slate-300"
-                  }`}
-                  title={item.hint}
-                >
-                  {locked ? `🔒 ${item.label}` : item.label}
-                  <span className="ml-1 text-[10px] text-slate-400">{item.hint}</span>
-                </button>
-              );
-            })}
+        <Section label="テンプレート">
+          <div className="flex flex-wrap gap-x-3 gap-y-2">
+            {PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyPreset(preset)}
+                className="text-xs text-neutral-400 underline-offset-4 transition hover:text-neutral-900 hover:underline"
+              >
+                {preset.label}
+              </button>
+            ))}
           </div>
-        </Field>
+        </Section>
 
-        <label className="mt-4 flex items-center gap-2 text-sm text-slate-600">
-          <input
-            type="checkbox"
-            checked={effectiveConfig.showWatermark}
-            disabled={!isPro}
-            onChange={(e) => setConfig({ ...config, showWatermark: e.target.checked })}
-            className="h-4 w-4 rounded border-slate-300"
-          />
-          透かし（Formula Studio）を表示
-          {!isPro && <span className="text-xs text-slate-400">Proで削除できます</span>}
-        </label>
-
-        <div className="mt-6 space-y-2">
-          <button
-            onClick={() => void download(1)}
-            className="w-full rounded-lg bg-blue-600 py-3 text-sm font-semibold text-white shadow-lg shadow-blue-600/20 transition hover:bg-blue-700"
-          >
-            PNGをダウンロード（等倍）
-          </button>
-          <button
-            onClick={() => void download(2)}
-            className="w-full rounded-lg border border-slate-200 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-          >
-            {isPro ? "高解像度（2倍）でダウンロード" : "🔒 高解像度（2倍）ダウンロード"}
-          </button>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={() => void copyToClipboard()}
-              className="rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              画像をコピー
-            </button>
-            <button
-              onClick={shareOnX}
-              className="rounded-lg border border-slate-200 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-            >
-              Xで投稿
-            </button>
-          </div>
-        </div>
-
-        {status && <p className="mt-3 text-center text-xs text-emerald-600">{status}</p>}
-      </section>
-
-      <section className="space-y-3">
-        <canvas
-          ref={canvasRef}
-          className="w-full rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-900/5"
-        />
-        <p className="text-center text-xs text-slate-500">
-          {aspect.width} × {aspect.height}px / {isPro ? "透かしなしで書き出せます" : "無料版は透かし付きで書き出されます"}
-        </p>
-      </section>
-
-      <UpgradeDialog
-        open={upgradeOpen}
-        onClose={() => setUpgradeOpen(false)}
-        onActivate={activate}
-      />
+        <Section label="履歴">
+          {entries.length === 0 ? (
+            <p className="text-xs text-neutral-400">保存すると直近5件がここに残ります。</p>
+          ) : (
+            <>
+              <button
+                onClick={() => setHistoryOpen((open) => !open)}
+                className="text-xs text-neutral-500 underline-offset-4 hover:text-neutral-900 hover:underline"
+              >
+                {historyOpen ? "閉じる" : `直近の${entries.length}件を表示`}
+              </button>
+              {historyOpen && (
+                <ul className="mt-2 space-y-1">
+                  {entries.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        onClick={() => restore(entry)}
+                        className="w-full truncate border border-neutral-200 px-3 py-2 text-left text-xs text-neutral-600 transition hover:border-neutral-900 hover:text-neutral-900"
+                        title={summarize(entry)}
+                      >
+                        {summarize(entry)}
+                      </button>
+                    </li>
+                  ))}
+                  <li>
+                    <button
+                      onClick={clear}
+                      className="text-xs text-neutral-400 underline-offset-4 hover:text-neutral-900 hover:underline"
+                    >
+                      履歴を削除
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </>
+          )}
+        </Section>
+      </div>
     </div>
   );
 }
 
-const fieldBaseClass =
-  "rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-500/10";
+const fieldClass =
+  "border border-neutral-200 bg-white px-3 py-2 text-sm text-neutral-900 outline-none transition placeholder:text-neutral-300 focus:border-neutral-900";
 
-const inputClass = `${fieldBaseClass} w-full`;
+const inputClass = `${fieldClass} w-full`;
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="mb-4">
-      <label className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-500">
-        {label}
-      </label>
+    <section>
+      <h2 className="mb-2 text-[11px] uppercase tracking-[0.18em] text-neutral-400">{label}</h2>
       {children}
-    </div>
+    </section>
   );
 }

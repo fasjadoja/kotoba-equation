@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
 import { SITE } from "@/lib/site";
-import { displayFont, gothicFont, minchoFont } from "@/lib/fonts";
+import { jpMonoFont, jpSansFont, monoFont, uiFont } from "@/lib/fonts";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
@@ -42,23 +42,23 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#FBFAF7",
+  themeColor: "#0B0D10",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="ja"
-      className={`${displayFont.variable} ${minchoFont.variable} ${gothicFont.variable}`}
+      className={`${uiFont.variable} ${monoFont.variable} ${jpSansFont.variable} ${jpMonoFont.variable}`}
     >
       <body className="antialiased">
         {children}
-        <footer className="border-t border-line py-8">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-5 gap-y-2 px-5 text-[11px] tracking-[0.08em] text-faint sm:px-8">
-            <Link href="/legal/terms" className="hover:text-ink">
+        <footer className="mt-12 border-t border-line py-6">
+          <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 px-4 text-[11px] text-faint">
+            <Link href="/legal/terms" className="transition hover:text-fg">
               利用規約
             </Link>
-            <Link href="/legal/privacy" className="hover:text-ink">
+            <Link href="/legal/privacy" className="transition hover:text-fg">
               プライバシー
             </Link>
             {SITE.donateUrl && (
@@ -66,13 +66,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href={SITE.donateUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="hover:text-ink"
+                className="transition hover:text-fg"
               >
                 Buy me a coffee
               </a>
             )}
-            <span className="ml-auto uppercase tracking-[0.2em]">
-              © {new Date().getFullYear()} FORMULA STUDIO
+            <span className="ml-auto font-mono uppercase tracking-[0.14em]">
+              © {new Date().getFullYear()} formula.studio
             </span>
           </div>
         </footer>

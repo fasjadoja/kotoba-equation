@@ -2,7 +2,7 @@ import { getSize, type FormulaConfig } from "./types";
 import { getTheme } from "./themes";
 
 export const SYSTEM_STACK =
-  '"Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif';
+  '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
 
 export const WORDMARK = "FORMULA STUDIO";
 
@@ -262,8 +262,8 @@ export function drawFormula(
   if (config.showWatermark) {
     ctx.textAlign = "left";
     ctx.fillStyle = theme.brand;
-    ctx.font = font(normalWeight, 13 * base, fontStack);
-    fillTracked(ctx, WORDMARK, marginX, headerY, 3.4 * base);
+    ctx.font = font(normalWeight, 12 * base, fontStack);
+    fillTracked(ctx, WORDMARK, marginX, headerY, 2.6 * base);
   }
 
   const availableTop = headerY + 34 * base;

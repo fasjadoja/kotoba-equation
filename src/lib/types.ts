@@ -1,9 +1,10 @@
-export type Operator = "×" | "＋" | "−" | "÷" | "⇒";
+/** Operators offered in the dropdown. Any single character can be typed instead. */
+export const OPERATORS = ["×", "＋", "−", "÷", "＝", "⇒", "＞", "＜"] as const;
 
-export const OPERATORS: Operator[] = ["×", "＋", "−", "÷", "⇒"];
+export type Operator = string;
 
 export type FormulaElement = {
-  op: Operator | "";
+  op: Operator;
   text: string;
 };
 
@@ -36,7 +37,7 @@ export type FormulaConfig = {
   author: string;
   showCopyright: boolean;
   themeId: string;
-  fontId: "mincho" | "gothic";
+  fontId: "sans" | "mono";
   sizeId: SizeId;
   showWatermark: boolean;
 };
@@ -45,9 +46,10 @@ export const MAX_ELEMENTS = 8;
 
 export const LIMITS = {
   resultText: 24,
-  element: 20,
-  subNote: 60,
+  element: 18,
+  subNote: 56,
   author: 24,
+  operator: 1,
 } as const;
 
 export const DEFAULT_CONFIG: FormulaConfig = {
@@ -60,8 +62,8 @@ export const DEFAULT_CONFIG: FormulaConfig = {
   subNote: "※考え方（-100〜+100点）が全体の掛け算を決める",
   author: "@your_account",
   showCopyright: false,
-  themeId: "paper",
-  fontId: "mincho",
+  themeId: "light",
+  fontId: "sans",
   sizeId: "x",
   showWatermark: true,
 };

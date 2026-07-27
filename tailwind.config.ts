@@ -9,27 +9,34 @@ export default {
   theme: {
     extend: {
       colors: {
-        /** warm greige stage the canvas sits on */
-        stage: "#EFEDE7",
-        paper: "#FBFAF7",
-        ink: "#1B1A16",
-        muted: "#8C877B",
-        faint: "#B4AEA1",
-        line: "#DFDACE",
+        /** app shell */
+        ink: "#0B0D10",
+        panel: "#111418",
+        raised: "#161A1F",
+        line: "#20252C",
+        edge: "#2C333B",
+        /** text */
+        fg: "#E7EAEE",
+        muted: "#98A1AC",
+        faint: "#6B7580",
+        /** accents */
+        accent: "#7AA2F7",
+        danger: "#E5484D",
       },
       fontFamily: {
-        display: ["var(--font-display)", "Georgia", "serif"],
         sans: [
-          "var(--font-gothic)",
+          "var(--font-ui)",
+          "var(--font-jp-sans)",
           "-apple-system",
           "BlinkMacSystemFont",
           "Hiragino Sans",
           "Yu Gothic",
           "sans-serif",
         ],
+        mono: ["var(--font-mono)", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       letterSpacing: {
-        brand: "0.36em",
+        brand: "0.22em",
       },
     },
   },

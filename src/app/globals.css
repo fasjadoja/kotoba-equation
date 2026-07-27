@@ -4,13 +4,14 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  color-scheme: dark;
 }
 
 body {
-  background-color: #fbfaf7;
-  color: #1b1a16;
-  font-family: var(--font-gothic), -apple-system, BlinkMacSystemFont, "Hiragino Sans",
-    "Yu Gothic", Meiryo, sans-serif;
+  background-color: #0b0d10;
+  color: #e7eaee;
+  font-family: var(--font-ui), var(--font-jp-sans), -apple-system, BlinkMacSystemFont,
+    "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
   font-feature-settings: "palt" 1;
 }
 
@@ -19,4 +20,8 @@ select,
 button,
 textarea {
   font-family: inherit;
+}
+
+::selection {
+  background-color: rgba(122, 162, 247, 0.32);
 }

@@ -243,7 +243,7 @@ export default function Editor() {
             <canvas
               ref={canvasRef}
               aria-label="生成された思考式の画像"
-              className="max-h-[46vh] w-auto max-w-full rounded-[2px] shadow-[0_8px_32px_rgba(0,0,0,0.5)] lg:max-h-[62vh]"
+              className="max-h-[46vh] w-auto max-w-full rounded-[2px] border border-edge shadow-[0_8px_32px_rgba(0,0,0,0.5)] lg:max-h-[62vh]"
             />
           </div>
         </div>

@@ -2,14 +2,52 @@ import type { FormulaElement } from "./types";
 
 export type Preset = {
   id: string;
-  category: "ビジネス" | "マーケ" | "自己啓発" | "キャリア" | "SNS運用" | "投資・お金";
+  category:
+    | "ビジネス"
+    | "マーケ"
+    | "自己啓発"
+    | "キャリア"
+    | "SNS運用"
+    | "投資・お金"
+    | "日常・価値観";
   label: string;
   resultText: string;
+  /** Defaults to 「＝」 when omitted. */
+  relation?: string;
   subNote: string;
   elements: FormulaElement[];
 };
 
 export const PRESETS: Preset[] = [
+  {
+    id: "heat",
+    category: "日常・価値観",
+    label: "体感の暑さ",
+    resultText: "体感の暑さ",
+    subNote: "※同じ気温でも、湿度が高いほどつらい",
+    elements: [
+      { op: "", text: "気温" },
+      { op: "×", text: "湿度" },
+    ],
+  },
+  {
+    id: "memory",
+    category: "日常・価値観",
+    label: "思い出 ＞ お金",
+    resultText: "思い出",
+    relation: "＞",
+    subNote: "※お金は戻るけれど、時間は戻らない",
+    elements: [{ op: "", text: "お金" }],
+  },
+  {
+    id: "today",
+    category: "日常・価値観",
+    label: "今日 ＞ 昨日",
+    resultText: "今日の自分",
+    relation: "＞",
+    subNote: "※比べる相手は、いつも昨日の自分",
+    elements: [{ op: "", text: "昨日の自分" }],
+  },
   {
     id: "life",
     category: "自己啓発",

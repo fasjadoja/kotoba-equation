@@ -1,4 +1,6 @@
 import Editor from "@/components/Editor";
+import Reveal from "@/components/Reveal";
+import SiteHeader from "@/components/SiteHeader";
 import { SITE } from "@/lib/site";
 
 const FAQ = [
@@ -9,6 +11,14 @@ const FAQ = [
   {
     q: "作った画像は商用利用できますか？",
     a: "できます。X・note・ブログ・資料など、用途の制限はありません。著作は作った方のものです。クレジットや © 表記も画像に入れられます。",
+  },
+  {
+    q: "＝以外の記号は使えますか？",
+    a: "使えます。＞ ＜ ≧ ≦ ≠ ≒ → から選べるので、「思い出＞お金」のような価値観の比較も作れます。好きな記号を1文字だけ直接入力することもできます。",
+  },
+  {
+    q: "「1＜2」のような短い式もきれいに作れますか？",
+    a: "作れます。レイアウトを「自動」にしておくと、短い式は横一列（1 ＜ 2）で、要素の多い式は上下に分けて配置されます。「横1行」「上下」に固定することもできます。",
   },
   {
     q: "TikTokやリールにも使えますか？",
@@ -32,7 +42,7 @@ export default function Home() {
         operatingSystem: "Web",
         offers: { "@type": "Offer", price: "0", priceCurrency: "JPY" },
         description:
-          "四則演算で思考を表す方程式画像を無料で作成できるジェネレーター。X・note・TikTok向けのサイズに対応。",
+          "「暑さ＝気温×湿度」「思い出＞お金」のようなことばの方程式を無料で画像にできるツール。X・note・TikTok向けのサイズに対応。",
       },
       {
         "@type": "FAQPage",
@@ -52,47 +62,49 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <header className="sticky top-0 z-10 border-b border-line bg-ink/90 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3">
-          <div className="flex items-center gap-3">
-            <span className="h-4 w-4 rounded-[3px] border border-edge bg-raised" aria-hidden />
-            <span className="font-mono text-[12px] uppercase tracking-brand text-fg">
-              formula<span className="text-faint">.studio</span>
-            </span>
-          </div>
-          <h1 className="order-last w-full text-[11px] text-muted sm:order-none sm:w-auto">
-            四則演算で、思考を1枚の画像に。無料・ログイン不要・広告なし。
-          </h1>
-          {SITE.donateUrl && (
-            <a
-              href={SITE.donateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-md border border-line bg-raised px-3 py-1.5 text-[11px] text-muted transition hover:border-edge hover:text-fg"
-            >
-              Buy me a coffee
-            </a>
-          )}
-        </div>
-      </header>
+      <SiteHeader />
 
-      <main className="mx-auto max-w-[1400px] px-4 py-4">
+      <main className="mx-auto max-w-[1400px] px-4 pb-6 pt-2">
+        <div className="mb-7 text-center">
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-panel/70 px-3 py-1 text-[11px] font-medium text-muted shadow-sm">
+            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
+            登録不要・無料・広告なし
+          </p>
+          <h1 className="mt-3 text-[24px] font-semibold tracking-tight text-fg sm:text-[32px]">
+            思っていることを、
+            <span className="relative whitespace-nowrap">
+              方程式
+              <span
+                className="absolute inset-x-0 bottom-0.5 -z-10 h-2.5 rounded-sm bg-accent/15"
+                aria-hidden
+              />
+            </span>
+            にする。
+          </h1>
+          <p className="mx-auto mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted">
+            「暑さ＝気温×湿度」のような式も、「思い出＞お金」のような比較も、1枚の画像に。
+          </p>
+        </div>
+
         <Editor />
 
-        <section className="mt-16 rounded-lg border border-line bg-panel p-6">
-          <h2 className="mb-5 font-mono text-[10px] uppercase tracking-[0.18em] text-faint">FAQ</h2>
-          <dl className="grid gap-6 sm:grid-cols-2">
-            {FAQ.map((item) => (
-              <div key={item.q}>
-                <dt className="text-[13px] text-fg">{item.q}</dt>
-                <dd className="mt-1.5 text-[13px] leading-relaxed text-muted">{item.a}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
+        <Reveal className="mt-16">
+          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
+            <h2 className="mb-5 text-[15px] font-semibold text-fg">よくある質問</h2>
+            <dl className="grid gap-6 sm:grid-cols-2">
+              {FAQ.map((item) => (
+                <div key={item.q}>
+                  <dt className="text-[13px] font-medium text-fg">{item.q}</dt>
+                  <dd className="mt-1.5 text-[13px] leading-relaxed text-muted">{item.a}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        </Reveal>
 
         {SITE.donateUrl && (
-          <section className="mt-4 rounded-lg border border-line bg-panel p-6">
+          <Reveal className="mt-4" delay={80}>
+          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
             <p className="max-w-2xl text-[13px] leading-relaxed text-muted">
               このツールは無料で公開しています。広告も、ログインも、有料プランもありません。
               続けられるかどうかは、使ってくれた方の気持ち次第です。
@@ -101,11 +113,12 @@ export default function Home() {
               href={SITE.donateUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-block rounded-md border border-line bg-raised px-4 py-2 text-[12px] text-muted transition hover:border-edge hover:text-fg"
+              className="mt-4 inline-block rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
             >
               開発者にコーヒーをおごる
             </a>
           </section>
+          </Reveal>
         )}
       </main>
     </div>

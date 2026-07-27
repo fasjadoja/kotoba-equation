@@ -1,12 +1,27 @@
 /** Operators offered in the dropdown. Any single character can be typed instead. */
 export const OPERATORS = ["×", "＋", "−", "÷", "＝", "⇒", "＞", "＜"] as const;
 
+/** Relation between the left-hand result and the right-hand formula. */
+export const RELATIONS = ["＝", "＞", "＜", "≧", "≦", "≠", "≒", "→"] as const;
+
 export type Operator = string;
 
 export type FormulaElement = {
   op: Operator;
   text: string;
 };
+
+/**
+ * "auto" keeps short formulas such as 「1 ＜ 2」 on a single line and stacks
+ * longer ones; the other two force a shape.
+ */
+export type LayoutId = "auto" | "inline" | "stack";
+
+export const LAYOUTS: { id: LayoutId; label: string; hint: string }[] = [
+  { id: "auto", label: "自動", hint: "短い式は横1行、長い式は上下" },
+  { id: "inline", label: "横1行", hint: "1 ＜ 2 のように横一列" },
+  { id: "stack", label: "上下", hint: "結果を上、要素を下に" },
+];
 
 export type SizeId = "x" | "square" | "note" | "portrait" | "story";
 
@@ -32,9 +47,11 @@ export function getSize(id: SizeId): CanvasSize {
 
 export type FormulaConfig = {
   resultText: string;
+  relation: string;
   elements: FormulaElement[];
   subNote: string;
   author: string;
+  layoutId: LayoutId;
   showCopyright: boolean;
   themeId: string;
   fontId: "sans" | "mono";
@@ -50,10 +67,12 @@ export const LIMITS = {
   subNote: 56,
   author: 24,
   operator: 1,
+  relation: 1,
 } as const;
 
 export const DEFAULT_CONFIG: FormulaConfig = {
   resultText: "人生の成果",
+  relation: "＝",
   elements: [
     { op: "", text: "能力" },
     { op: "×", text: "熱量" },
@@ -61,6 +80,7 @@ export const DEFAULT_CONFIG: FormulaConfig = {
   ],
   subNote: "※考え方（-100〜+100点）が全体の掛け算を決める",
   author: "@your_account",
+  layoutId: "auto",
   showCopyright: false,
   themeId: "light",
   fontId: "sans",

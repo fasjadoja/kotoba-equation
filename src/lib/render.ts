@@ -1,10 +1,11 @@
 import { getSize, type FormulaConfig } from "./types";
 import { getTheme } from "./themes";
+import { drawLogoMark } from "./logo";
 
 export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
 
-export const WORDMARK = "FORMULA STUDIO";
+export const WORDMARK = "ことばの方程式";
 
 const NO_LINE_START = new Set(
   "、。，．・：；！？）】』」〉》”’ゝゞーぁぃぅぇぉっゃゅょゎヵヶァィゥェォッャュョヮ!?),.:;]}".split(
@@ -155,11 +156,23 @@ type Block =
       color: string;
       lineHeight: number;
     }
-  | { kind: "rule"; width: number; color: string; lineHeight: number }
   | { kind: "formula"; lines: Line[]; size: number; gap: number; lineHeight: number };
 
 function blockHeight(block: Block): number {
-  return block.kind === "rule" ? block.lineHeight : block.lines.length * block.lineHeight;
+  return block.lines.length * block.lineHeight;
+}
+
+function contentLength(config: FormulaConfig): number {
+  return Array.from(
+    config.resultText + config.elements.map((element) => element.text).join(""),
+  ).length;
+}
+
+/** 「1 ＜ 2」 style formulas read better on one line than stacked. */
+export function isInline(config: FormulaConfig): boolean {
+  if (config.layoutId === "inline") return true;
+  if (config.layoutId === "stack") return false;
+  return config.elements.length === 1 && contentLength(config) <= 12;
 }
 
 function buildBlocks(
@@ -174,39 +187,65 @@ function buildBlocks(
   const { fontStack, strongWeight, normalWeight } = options;
   const blocks: Block[] = [];
 
-  const titleSize = 52 * unit;
-  ctx.font = font(strongWeight, titleSize, fontStack);
-  blocks.push({
-    kind: "text",
-    lines: wrapText(ctx, config.resultText || "成果", contentWidth),
-    size: titleSize,
-    weight: strongWeight,
-    color: theme.title,
-    lineHeight: titleSize * 1.34,
-  });
+  const relation = config.relation || "＝";
+  const result = config.resultText || "成果";
+  const elementGroups = (): Part[][] =>
+    config.elements.map((element, index) => {
+      const operand: Part = { text: element.text || "———", color: theme.element };
+      if (index === 0) return [operand];
+      return [{ text: element.op || "×", color: theme.operator }, operand];
+    });
 
-  blocks.push({
-    kind: "rule",
-    width: Math.min(contentWidth * 0.12, 64 * baseUnit),
-    color: theme.equals,
-    lineHeight: 46 * unit,
-  });
+  if (isInline(config)) {
+    const inlineSize = 46 * unit;
+    ctx.font = font(strongWeight, inlineSize, fontStack);
+    const gap = inlineSize * 0.34;
+    const groups: Part[][] = [
+      [{ text: result, color: theme.title }],
+      ...elementGroups().map((group, index) =>
+        index === 0 ? [{ text: relation, color: theme.operator }, ...group] : group,
+      ),
+    ];
+    blocks.push({
+      kind: "formula",
+      lines: packGroups(ctx, groups, contentWidth, gap),
+      size: inlineSize,
+      gap,
+      lineHeight: inlineSize * 1.42,
+    });
+  } else {
+    const titleSize = 52 * unit;
+    ctx.font = font(strongWeight, titleSize, fontStack);
+    blocks.push({
+      kind: "text",
+      lines: wrapText(ctx, result, contentWidth),
+      size: titleSize,
+      weight: strongWeight,
+      color: theme.title,
+      lineHeight: titleSize * 1.34,
+    });
 
-  const formulaSize = 44 * unit;
-  ctx.font = font(strongWeight, formulaSize, fontStack);
-  const groups: Part[][] = config.elements.map((element, index) => {
-    const operand: Part = { text: element.text || "———", color: theme.element };
-    if (index === 0) return [operand];
-    return [{ text: element.op || "×", color: theme.operator }, operand];
-  });
-  const gap = formulaSize * 0.38;
-  blocks.push({
-    kind: "formula",
-    lines: packGroups(ctx, groups, contentWidth, gap),
-    size: formulaSize,
-    gap,
-    lineHeight: formulaSize * 1.46,
-  });
+    const relationSize = 34 * unit;
+    blocks.push({
+      kind: "text",
+      lines: [relation],
+      size: relationSize,
+      weight: normalWeight,
+      color: theme.operator,
+      lineHeight: relationSize * 1.5,
+    });
+
+    const formulaSize = 44 * unit;
+    ctx.font = font(strongWeight, formulaSize, fontStack);
+    const gap = formulaSize * 0.38;
+    blocks.push({
+      kind: "formula",
+      lines: packGroups(ctx, elementGroups(), contentWidth, gap),
+      size: formulaSize,
+      gap,
+      lineHeight: formulaSize * 1.46,
+    });
+  }
 
   if (config.subNote) {
     const noteSize = Math.max(19 * baseUnit, 19 * unit);
@@ -224,6 +263,27 @@ function buildBlocks(
   const gaps = (blocks.length - 1) * 16 * unit;
   const height = blocks.reduce((acc, block) => acc + blockHeight(block), 0) + gaps;
   return { blocks, height };
+}
+
+/** Faint dot grid inside the frame: the print-like texture of the brand. */
+function drawDotGrid(
+  ctx: CanvasRenderingContext2D,
+  color: string,
+  inset: number,
+  width: number,
+  height: number,
+  base: number,
+) {
+  const step = 22 * base;
+  const radius = Math.max(0.8, 1.1 * base);
+  ctx.fillStyle = color;
+  for (let y = inset + step; y < height - inset; y += step) {
+    for (let x = inset + step; x < width - inset; x += step) {
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 }
 
 export function creditText(config: FormulaConfig): string {
@@ -248,6 +308,7 @@ export function drawFormula(
   ctx.fillRect(0, 0, width, height);
 
   const inset = Math.round(Math.min(width, height) * 0.05);
+  drawDotGrid(ctx, theme.grid, inset, width, height, base);
   ctx.strokeStyle = theme.frame;
   ctx.lineWidth = Math.max(1, base);
   ctx.strokeRect(inset + 0.5, inset + 0.5, width - inset * 2 - 1, height - inset * 2 - 1);
@@ -260,10 +321,12 @@ export function drawFormula(
 
   ctx.textBaseline = "middle";
   if (config.showWatermark) {
+    const markSize = 20 * base;
+    drawLogoMark(ctx, marginX, headerY - markSize / 2, markSize, theme.accent, theme.onAccent);
     ctx.textAlign = "left";
     ctx.fillStyle = theme.brand;
-    ctx.font = font(normalWeight, 12 * base, fontStack);
-    fillTracked(ctx, WORDMARK, marginX, headerY, 2.6 * base);
+    ctx.font = font(normalWeight, 13 * base, fontStack);
+    fillTracked(ctx, WORDMARK, marginX + markSize + 8 * base, headerY, 1.2 * base);
   }
 
   const availableTop = headerY + 34 * base;
@@ -279,7 +342,11 @@ export function drawFormula(
   // Tall formats (1:1, 4:5, 9:16) leave a lot of vertical room; scale the block
   // up so the composition keeps the same optical weight as the 16:9 output.
   const ratio = height / width;
-  const maxUnit = base * (ratio >= 1.6 ? 2.4 : ratio >= 1.25 ? 1.9 : ratio >= 0.95 ? 1.6 : 1);
+  // A handful of characters on one line would otherwise float in a large empty
+  // canvas, so short inline formulas are allowed to grow further.
+  const compact = isInline(config) && contentLength(config) <= 10 ? 1.8 : 1;
+  const maxUnit =
+    base * (ratio >= 1.6 ? 2.4 : ratio >= 1.25 ? 1.9 : ratio >= 0.95 ? 1.6 : 1) * compact;
   while (unit < maxUnit) {
     const next = buildBlocks(ctx, config, options, contentWidth, unit + base * 0.02, base);
     if (next.height > availableHeight * 0.72) break;
@@ -292,18 +359,6 @@ export function drawFormula(
 
   layout.blocks.forEach((block, index) => {
     if (index > 0) y += blockGap;
-
-    if (block.kind === "rule") {
-      const lineY = Math.round(y + block.lineHeight / 2) + 0.5;
-      ctx.strokeStyle = block.color;
-      ctx.lineWidth = Math.max(1, 1.4 * base);
-      ctx.beginPath();
-      ctx.moveTo((width - block.width) / 2, lineY);
-      ctx.lineTo((width + block.width) / 2, lineY);
-      ctx.stroke();
-      y += block.lineHeight;
-      return;
-    }
 
     if (block.kind === "text") {
       ctx.font = font(block.weight, block.size, fontStack);

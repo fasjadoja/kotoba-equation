@@ -10,22 +10,35 @@ export type HistoryEntry = {
   id: string;
   createdAt: number;
   resultText: string;
+  relation: string;
   elements: FormulaConfig["elements"];
   subNote: string;
   author: string;
 };
 
-function isEntry(value: unknown): value is HistoryEntry {
-  if (typeof value !== "object" || value === null) return false;
+/** Entries stored before relations existed are kept and default to 「＝」. */
+function toEntry(value: unknown): HistoryEntry | null {
+  if (typeof value !== "object" || value === null) return null;
   const entry = value as Partial<HistoryEntry>;
-  return (
-    typeof entry.id === "string" &&
-    typeof entry.createdAt === "number" &&
-    typeof entry.resultText === "string" &&
-    typeof entry.subNote === "string" &&
-    typeof entry.author === "string" &&
-    Array.isArray(entry.elements)
-  );
+  if (
+    typeof entry.id !== "string" ||
+    typeof entry.createdAt !== "number" ||
+    typeof entry.resultText !== "string" ||
+    typeof entry.subNote !== "string" ||
+    typeof entry.author !== "string" ||
+    !Array.isArray(entry.elements)
+  ) {
+    return null;
+  }
+  return {
+    id: entry.id,
+    createdAt: entry.createdAt,
+    resultText: entry.resultText,
+    relation: typeof entry.relation === "string" && entry.relation ? entry.relation : "＝",
+    elements: entry.elements.map((element) => ({ ...element })),
+    subNote: entry.subNote,
+    author: entry.author,
+  };
 }
 
 function read(): HistoryEntry[] {
@@ -34,14 +47,17 @@ function read(): HistoryEntry[] {
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(isEntry).slice(0, MAX_ITEMS);
+    return parsed
+      .map(toEntry)
+      .filter((entry): entry is HistoryEntry => entry !== null)
+      .slice(0, MAX_ITEMS);
   } catch {
     return [];
   }
 }
 
 function summarize(entry: HistoryEntry): string {
-  return `${entry.resultText}＝${entry.elements
+  return `${entry.resultText}${entry.relation || "＝"}${entry.elements
     .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
     .join("")}`;
 }
@@ -58,6 +74,7 @@ export function useHistory() {
       id: `${Date.now()}`,
       createdAt: Date.now(),
       resultText: config.resultText,
+      relation: config.relation,
       elements: config.elements.map((element) => ({ ...element })),
       subNote: config.subNote,
       author: config.author,

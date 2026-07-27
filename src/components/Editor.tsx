@@ -4,12 +4,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PRESETS, type Preset } from "@/lib/presets";
 import { THEMES } from "@/lib/themes";
 import { CANVAS_FONTS, type CanvasFontId } from "@/lib/fonts";
-import { drawFormula, renderToBlob, type RenderOptions } from "@/lib/render";
+import { WORDMARK, drawFormula, renderToBlob, type RenderOptions } from "@/lib/render";
 import {
   DEFAULT_CONFIG,
+  LAYOUTS,
   LIMITS,
   MAX_ELEMENTS,
   OPERATORS,
+  RELATIONS,
   SIZES,
   getSize,
   type FormulaConfig,
@@ -43,6 +45,7 @@ async function ensureFont(config: FormulaConfig) {
   const { families } = CANVAS_FONTS[config.fontId];
   const text = [
     config.resultText,
+    config.relation,
     config.subNote,
     config.author,
     ...config.elements.map((element) => `${element.op}${element.text}`),
@@ -54,7 +57,7 @@ async function ensureFont(config: FormulaConfig) {
         document.fonts.load(`${options.strongWeight} 48px ${family}`, text),
         document.fonts.load(
           `${options.normalWeight} 20px ${family}`,
-          `${text} FORMULASTUDIO©`,
+          `${text}${WORDMARK}©`,
         ),
       ]),
     );
@@ -71,12 +74,17 @@ function isPresetOperator(op: Operator) {
   return (OPERATORS as readonly string[]).includes(op);
 }
 
+function isPresetRelation(relation: string) {
+  return (RELATIONS as readonly string[]).includes(relation);
+}
+
 export default function Editor() {
   const [config, setConfig] = useState<FormulaConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<string | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [canCopy, setCanCopy] = useState(false);
   const [customOps, setCustomOps] = useState<boolean[]>([]);
+  const [customRelation, setCustomRelation] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
 
@@ -122,15 +130,18 @@ export default function Editor() {
   const applyPreset = (preset: Preset) => {
     update({
       resultText: preset.resultText,
+      relation: preset.relation ?? "＝",
       subNote: preset.subNote,
       elements: preset.elements.map((element) => ({ ...element })),
     });
     setCustomOps([]);
+    setCustomRelation(!isPresetRelation(preset.relation ?? "＝"));
   };
 
   const restore = (entry: HistoryEntry) => {
     update({
       resultText: entry.resultText,
+      relation: entry.relation || "＝",
       subNote: entry.subNote,
       author: entry.author,
       elements: entry.elements.map((element) => ({ ...element })),
@@ -140,6 +151,7 @@ export default function Editor() {
         (element) => !!element.op && !isPresetOperator(element.op),
       ),
     );
+    setCustomRelation(!isPresetRelation(entry.relation || "＝"));
     setHistoryOpen(false);
     setStatus("履歴から復元しました");
   };
@@ -219,7 +231,7 @@ export default function Editor() {
   };
 
   const handleShare = async () => {
-    const text = `${config.resultText} ＝ ${formulaText()}${
+    const text = `${config.resultText} ${config.relation || "＝"} ${formulaText()}${
       config.subNote ? `\n\n${config.subNote}` : ""
     }`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
@@ -257,19 +269,59 @@ export default function Editor() {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
-      <div className="order-2 min-w-0 divide-y divide-line rounded-lg border border-line bg-panel lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
-        <Section index="①" label="結果（＝の左側）">
+      <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <Section index="①" label="結果（左側）">
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
-            placeholder="人生の成果"
+            placeholder="体感の暑さ"
             limit={LIMITS.resultText}
           />
         </Section>
 
+        <Section index="②" label="関係（左と右をつなぐ記号）">
+          <div className="flex items-center gap-1.5">
+            <select
+              value={customRelation ? CUSTOM_OP : config.relation}
+              onChange={(e) => {
+                const value = e.target.value;
+                setCustomRelation(value === CUSTOM_OP);
+                update({ relation: value === CUSTOM_OP ? "" : value });
+              }}
+              aria-label="関係記号"
+              className={`${fieldClass} w-[84px] shrink-0 px-2 text-center`}
+            >
+              {RELATIONS.map((relation) => (
+                <option key={relation} value={relation}>
+                  {relation}
+                </option>
+              ))}
+              <option value={CUSTOM_OP}>･･･</option>
+            </select>
+            {customRelation && (
+              <input
+                type="text"
+                value={config.relation}
+                maxLength={LIMITS.relation}
+                placeholder="≒"
+                aria-label="関係記号を直接入力（1文字）"
+                onChange={(e) =>
+                  update({
+                    relation: Array.from(e.target.value).slice(-1).join(""),
+                  })
+                }
+                className={`${fieldClass} w-[60px] shrink-0 px-2 text-center`}
+              />
+            )}
+          </div>
+          <p className="mt-2 text-[11px] leading-snug text-faint">
+            「暑さ＝気温×湿度」のような式も、「思い出＞お金」のような比較も作れます。
+          </p>
+        </Section>
+
         <Section
-          index="②"
-          label="右側の要素（四則演算）"
+          index="③"
+          label="右側の要素"
           hint={`${config.elements.length} / ${MAX_ELEMENTS}`}
         >
           <div className="space-y-1.5">
@@ -332,7 +384,7 @@ export default function Editor() {
                     disabled={config.elements.length <= 1}
                     aria-label={`要素 ${index + 1} を削除`}
                     title="この要素を削除"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line bg-raised text-danger transition hover:border-danger/60 hover:bg-danger/10 disabled:cursor-not-allowed disabled:border-line disabled:bg-raised disabled:text-faint/40"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-danger/30 bg-danger/5 text-danger transition hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-raised disabled:text-faint/50"
                   >
                     <TrashIcon />
                   </button>
@@ -343,7 +395,7 @@ export default function Editor() {
           {config.elements.length < MAX_ELEMENTS && (
             <button
               onClick={addElement}
-              className="mt-1.5 w-full rounded-md border border-dashed border-edge py-2 text-[12px] text-muted transition hover:border-accent/60 hover:text-fg"
+              className="mt-1.5 w-full rounded-xl border border-dashed border-edge py-2 text-[12px] font-medium text-accent transition hover:border-accent hover:bg-accent/5"
             >
               ＋ 要素を追加
             </button>
@@ -353,7 +405,7 @@ export default function Editor() {
           </p>
         </Section>
 
-        <Section index="③" label="補足（下部メッセージ）">
+        <Section index="④" label="補足（下部メッセージ）">
           <Field
             value={config.subNote}
             onChange={(value) => update({ subNote: value })}
@@ -362,7 +414,7 @@ export default function Editor() {
           />
         </Section>
 
-        <Section index="④" label="アカウント名 / クレジット">
+        <Section index="⑤" label="アカウント名 / クレジット">
           <Field
             value={config.author}
             onChange={(value) => update({ author: value })}
@@ -378,7 +430,7 @@ export default function Editor() {
             <Toggle
               checked={config.showWatermark}
               onChange={(checked) => update({ showWatermark: checked })}
-              label="FORMULA STUDIO のロゴを入れる"
+              label="「ことばの方程式」のロゴを入れる"
             />
           </div>
         </Section>
@@ -386,7 +438,7 @@ export default function Editor() {
         <div className="space-y-2 p-3.5">
           <button
             onClick={() => void handleShare()}
-            className="w-full rounded-md bg-fg px-5 py-3 text-[13px] font-medium text-ink transition hover:bg-white"
+            className="w-full rounded-xl bg-accent px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_6px_18px_rgba(43,78,230,0.28)] transition hover:-translate-y-0.5 hover:bg-accentDark hover:shadow-[0_10px_24px_rgba(43,78,230,0.32)] active:translate-y-0"
           >
             画像を保存して X でシェア
           </button>
@@ -408,14 +460,14 @@ export default function Editor() {
               </button>
             )}
           </div>
-          <p className="h-4 text-center font-mono text-[11px] text-accent">
+          <p className="h-4 text-center text-[11px] text-accent">
             {status ?? ""}
           </p>
         </div>
       </div>
 
       <div className="order-1 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-        <div className="rounded-lg border border-line bg-panel">
+        <div className="rounded-2xl border border-line bg-panel shadow-card">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
             <div className="flex flex-wrap gap-1">
               {SIZES.map((item) => (
@@ -424,10 +476,10 @@ export default function Editor() {
                   onClick={() => update({ sizeId: item.id })}
                   aria-pressed={config.sizeId === item.id}
                   title={item.hint}
-                  className={`rounded-md border px-2.5 py-1 font-mono text-[11px] transition ${
+                  className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
                     config.sizeId === item.id
-                      ? "border-accent/60 bg-accent/10 text-fg"
-                      : "border-transparent text-faint hover:border-line hover:text-fg"
+                      ? "bg-accent/10 text-accent"
+                      : "text-muted hover:bg-raised hover:text-fg"
                   }`}
                 >
                   {item.label}
@@ -435,34 +487,33 @@ export default function Editor() {
               ))}
             </div>
             <span className="font-mono text-[11px] text-faint">
-              {size.width} × {size.height}
-              <span className="text-edge"> / </span>@2x
+              {size.width} × {size.height} / @2x
             </span>
           </div>
           <div className="flex w-full items-center justify-center p-4 sm:p-8">
             <canvas
               ref={canvasRef}
               aria-label="生成された思考式の画像"
-              className="max-h-[46vh] w-auto max-w-full rounded-[2px] border border-edge shadow-[0_8px_32px_rgba(0,0,0,0.5)] lg:max-h-[58vh]"
+              className="max-h-[46vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 lg:max-h-[58vh]"
             />
           </div>
         </div>
       </div>
 
       <div className="order-3 min-w-0 lg:col-start-2 lg:row-start-2">
-        <div className="divide-y divide-line rounded-lg border border-line bg-panel">
-          <div className="grid sm:grid-cols-[220px_minmax(0,1fr)] sm:divide-x sm:divide-line">
-            <Section label="Typeface">
+        <div className="divide-y divide-line rounded-2xl border border-line bg-panel shadow-card">
+          <div className="grid sm:grid-cols-[190px_210px_minmax(0,1fr)] sm:divide-x sm:divide-line">
+            <Section label="書体">
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
                   <button
                     key={id}
                     onClick={() => update({ fontId: id })}
                     aria-pressed={config.fontId === id}
-                    className={`rounded-md border px-3 py-2 font-mono text-[11px] transition ${
+                    className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition ${
                       config.fontId === id
-                        ? "border-accent/60 bg-accent/10 text-fg"
-                        : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
                     }`}
                   >
                     {CANVAS_FONTS[id].label}
@@ -471,21 +522,44 @@ export default function Editor() {
               </div>
             </Section>
 
-            <Section label="Palette">
+            <Section label="レイアウト">
+              <div className="grid grid-cols-3 gap-1.5">
+                {LAYOUTS.map((layout) => (
+                  <button
+                    key={layout.id}
+                    onClick={() => update({ layoutId: layout.id })}
+                    aria-pressed={config.layoutId === layout.id}
+                    title={layout.hint}
+                    className={`rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
+                      config.layoutId === layout.id
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
+                    }`}
+                  >
+                    {layout.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-2 text-[11px] leading-snug text-faint">
+                自動なら「1＜2」のような短い式だけ横1行になります。
+              </p>
+            </Section>
+
+            <Section label="配色">
               <div className="grid max-w-md grid-cols-3 gap-1.5">
                 {THEMES.map((theme) => (
                   <button
                     key={theme.id}
                     onClick={() => update({ themeId: theme.id })}
                     aria-pressed={config.themeId === theme.id}
-                    className={`flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-[11px] transition ${
+                    className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
                       config.themeId === theme.id
-                        ? "border-accent/60 bg-accent/10 text-fg"
-                        : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
                     }`}
                   >
                     <span
-                      className="h-2.5 w-2.5 rounded-[2px] border border-edge"
+                      className="h-2.5 w-2.5 rounded-full border border-edge"
                       style={{ backgroundColor: theme.swatch }}
                     />
                     {theme.name}
@@ -495,13 +569,13 @@ export default function Editor() {
             </Section>
           </div>
 
-          <Section label="Templates">
+          <Section label="テンプレート">
             <div className="flex flex-wrap gap-1.5">
               {PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
-                  className="rounded-md border border-line bg-raised px-2.5 py-1.5 text-[11px] text-muted transition hover:border-edge hover:text-fg"
+                  className="rounded-full border border-edge bg-panel px-3 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:bg-accent/5 hover:text-accent"
                 >
                   {preset.label}
                 </button>
@@ -509,7 +583,7 @@ export default function Editor() {
             </div>
           </Section>
 
-          <Section label="History">
+          <Section label="履歴">
             {entries.length === 0 ? (
               <p className="text-[11px] text-faint">
                 保存すると直近5件がここに残ります。
@@ -518,7 +592,7 @@ export default function Editor() {
               <>
                 <button
                   onClick={() => setHistoryOpen((open) => !open)}
-                  className="font-mono text-[11px] text-muted transition hover:text-fg"
+                  className="text-[11px] text-accent transition hover:underline"
                 >
                   {historyOpen
                     ? "▾ 閉じる"
@@ -530,7 +604,7 @@ export default function Editor() {
                       <li key={entry.id}>
                         <button
                           onClick={() => restore(entry)}
-                          className="w-full truncate rounded-md border border-line bg-raised px-3 py-2 text-left text-[11px] text-muted transition hover:border-edge hover:text-fg"
+                          className="w-full truncate rounded-lg border border-line bg-raised px-3 py-2 text-left text-[11px] text-muted transition hover:border-accent/50 hover:text-fg"
                           title={summarize(entry)}
                         >
                           {summarize(entry)}
@@ -558,10 +632,10 @@ export default function Editor() {
 
 // text-base on mobile keeps iOS Safari from zooming in when a field is focused.
 const fieldClass =
-  "h-9 rounded-md border border-line bg-raised px-2.5 text-base text-fg outline-none transition placeholder:text-faint/70 focus:border-accent/70 focus:ring-1 focus:ring-accent/30 sm:text-[13px]";
+  "h-10 rounded-xl border border-edge bg-raised px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/40 focus:border-accent focus:bg-panel focus:shadow-none focus:ring-2 focus:ring-accent/20 sm:text-[13px]";
 
 const secondaryButtonClass =
-  "rounded-md border border-line bg-raised px-4 py-2.5 text-[13px] text-muted transition hover:border-edge hover:text-fg";
+  "rounded-xl border border-edge bg-panel px-4 py-2.5 text-[13px] font-medium text-muted shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:text-accent";
 
 function TrashIcon() {
   return (
@@ -649,11 +723,11 @@ function Section({
         <h2
           className={
             index
-              ? "flex items-center gap-1.5 text-[12px] text-muted"
-              : "font-mono text-[10px] uppercase tracking-[0.18em] text-faint"
+              ? "flex items-center gap-1.5 text-[12px] font-medium text-fg"
+              : "text-[11px] font-medium text-muted"
           }
         >
-          {index && <span className="text-faint">{index}</span>}
+          {index && <span className="text-accent">{index}</span>}
           {label}
         </h2>
         {hint && (

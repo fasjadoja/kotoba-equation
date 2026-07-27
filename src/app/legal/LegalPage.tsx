@@ -7,9 +7,9 @@ export default function LegalPage({ title, sections }: { title: string; sections
     <div className="mx-auto max-w-2xl px-5 pb-24 pt-8 sm:px-8 sm:pt-12">
       <Link
         href="/"
-        className="font-mono text-[11px] uppercase tracking-brand text-faint transition hover:text-fg"
+        className="text-[12px] font-medium text-accent transition hover:underline"
       >
-        formula.studio
+        ← ことばの方程式
       </Link>
       <h1 className="mt-10 border-b border-line pb-4 text-base text-fg">{title}</h1>
       <div className="mt-8 space-y-8">

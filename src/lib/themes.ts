@@ -3,9 +3,15 @@ export type Theme = {
   name: string;
   background: string;
   frame: string;
+  /** Wordmark text next to the logo mark. */
   brand: string;
+  /** Logo mark fill and any brand-colored detail. */
+  accent: string;
+  /** Glyph drawn inside the logo mark. */
+  onAccent: string;
+  /** Dot grid printed behind the composition. */
+  grid: string;
   title: string;
-  equals: string;
   element: string;
   operator: string;
   note: string;
@@ -16,45 +22,51 @@ export type Theme = {
 export const THEMES: Theme[] = [
   {
     id: "light",
-    name: "Light",
+    name: "Paper",
     background: "#FFFFFF",
-    frame: "#E4E7EB",
-    brand: "#A6ADB6",
-    title: "#0B0D10",
-    equals: "#D3D8DE",
-    element: "#0B0D10",
-    operator: "#9BA3AD",
-    note: "#6B7280",
-    author: "#A6ADB6",
+    frame: "#E7EAF2",
+    brand: "#96A0B2",
+    accent: "#2B4EE6",
+    onAccent: "#FFFFFF",
+    grid: "#EEF1F8",
+    title: "#0F1524",
+    element: "#0F1524",
+    operator: "#6C7BE0",
+    note: "#5B6472",
+    author: "#96A0B2",
     swatch: "#FFFFFF",
   },
   {
     id: "slate",
-    name: "Slate",
-    background: "#F4F6F8",
-    frame: "#DDE2E8",
-    brand: "#98A1AC",
-    title: "#101317",
-    equals: "#C9D0D8",
-    element: "#101317",
-    operator: "#8B95A1",
-    note: "#5F6874",
-    author: "#98A1AC",
-    swatch: "#F4F6F8",
+    name: "Mist",
+    background: "#F3F5FA",
+    frame: "#E0E5F0",
+    brand: "#8A94A6",
+    accent: "#2B4EE6",
+    onAccent: "#FFFFFF",
+    grid: "#E7EBF5",
+    title: "#131A2A",
+    element: "#131A2A",
+    operator: "#6C7BE0",
+    note: "#5A6474",
+    author: "#8A94A6",
+    swatch: "#F3F5FA",
   },
   {
     id: "dark",
-    name: "Dark",
-    background: "#0B0D10",
-    frame: "#22272E",
-    brand: "#5A626C",
-    title: "#F2F4F6",
-    equals: "#333A43",
-    element: "#F2F4F6",
-    operator: "#6E7783",
-    note: "#98A1AC",
-    author: "#5A626C",
-    swatch: "#0B0D10",
+    name: "Ink",
+    background: "#101728",
+    frame: "#26314A",
+    brand: "#7C89A6",
+    accent: "#6C8CFF",
+    onAccent: "#101728",
+    grid: "#182137",
+    title: "#F3F6FC",
+    element: "#F3F6FC",
+    operator: "#8FA4FF",
+    note: "#A9B4C9",
+    author: "#7C89A6",
+    swatch: "#101728",
   },
 ];
 

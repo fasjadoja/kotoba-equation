@@ -97,6 +97,7 @@ export default function Editor() {
   const [customRelation, setCustomRelation] = useState(false);
   const [justUpdated, setJustUpdated] = useState(false);
   const [makePublic, setMakePublic] = useState(false);
+  const [keepHistory, setKeepHistory] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -231,9 +232,10 @@ export default function Editor() {
     setCustomOps((previous) => previous.filter((_, i) => i !== index));
   };
 
-  /** Local history always; the public gallery only when the user opted in. */
+  /** Both destinations are the user's choice; nothing leaves the browser unless
+   *  the public gallery is explicitly ticked. */
   const commit = () => {
-    save(config);
+    if (keepHistory) save(config);
     if (makePublic) void gallery.share(config);
   };
 
@@ -496,18 +498,32 @@ export default function Editor() {
           </div>
         </Section>
 
-        {gallery.enabled && (
-          <Section index="⑦" label="みんなの作品への掲載（任意）">
+        <Section index="⑦" label="保存と公開">
+          <div className="space-y-2">
             <Toggle
-              checked={makePublic}
-              onChange={setMakePublic}
-              label="この式を「みんなの作品」に載せる"
+              checked={keepHistory}
+              onChange={setKeepHistory}
+              label="この式を履歴に保存する（この端末だけ）"
             />
-            <p className="mt-1.5 text-[11px] leading-snug text-faint">
-              チェックしたときだけ、保存・シェア時に式の文字（結果・要素・補足・ハッシュタグ・クレジット）を公開します。チェックを外せば、今までどおりブラウザ内だけで完結します。
-            </p>
-          </Section>
-        )}
+            {gallery.enabled ? (
+              <Toggle
+                checked={makePublic}
+                onChange={setMakePublic}
+                label="この式を「みんなの作品」に載せる（公開）"
+              />
+            ) : (
+              <p className="text-[11px] leading-snug text-faint">
+                「みんなの作品」への公開は準備中です。公開する式はいつでもご自身で選べます。
+              </p>
+            )}
+          </div>
+          <p className="mt-1.5 text-[11px] leading-snug text-faint">
+            履歴は保存・シェアしたときに、直近{HISTORY_LIMIT}件までこのブラウザに残ります（テンプレとして再利用できます）。
+            {gallery.enabled
+              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。"
+              : ""}
+          </p>
+        </Section>
 
         <div className="space-y-2 p-3.5">
           <button
@@ -534,11 +550,13 @@ export default function Editor() {
         </div>
       </div>
 
-      <div className="sticky top-[56px] z-10 order-1 min-w-0 lg:static lg:order-none lg:col-start-2 lg:row-start-1">
+      {/* On phones the preview is pinned under the header; the band behind it is
+          opaque so scrolling content never shows through the gap. */}
+      <div className="sticky top-0 z-10 order-1 -mx-4 min-w-0 bg-ink px-4 pb-2 pt-[48px] lg:static lg:order-none lg:col-start-2 lg:row-start-1 lg:mx-0 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-0">
         <div
           className={`rounded-2xl border bg-panel transition-shadow duration-300 ${
             justUpdated
-              ? "border-accent/40 shadow-[0_6px_20px_rgba(14,124,102,0.14)]"
+              ? "border-accent/40 shadow-[0_6px_20px_rgba(11,107,203,0.16)]"
               : "border-line shadow-card"
           }`}
         >
@@ -823,7 +841,7 @@ function Slider({
 }
 
 const actionButtonClass =
-  "rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(14,124,102,0.20)] transition hover:bg-accentDark active:translate-y-px";
+  "rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark active:translate-y-px";
 
 function TrashIcon() {
   return (

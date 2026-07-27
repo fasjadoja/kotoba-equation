@@ -4,6 +4,26 @@ import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { SITE } from "@/lib/site";
 
+function CoffeeIcon() {
+  return (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.9"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M4 9h13v6a4 4 0 0 1-4 4H8a4 4 0 0 1-4-4V9Z" />
+      <path d="M17 10h1.5a2.5 2.5 0 0 1 0 5H17" />
+      <path d="M8 2.5v2M12 2.5v2" />
+    </svg>
+  );
+}
+
 /** Condenses and lifts the bar once the page scrolls away from the top. */
 export default function SiteHeader() {
   const [scrolled, setScrolled] = useState(false);
@@ -34,9 +54,10 @@ export default function SiteHeader() {
             href={SITE.donateUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-edge bg-panel px-3.5 py-1.5 text-[12px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
+            className="inline-flex items-center gap-1.5 rounded-full bg-coffee px-3.5 py-2 text-[12px] font-semibold text-[#3B2A12] shadow-[0_2px_8px_rgba(255,169,43,0.35)] transition hover:brightness-105 active:translate-y-px"
           >
-            ☕︎ 寄付で応援する
+            <CoffeeIcon />
+            コーヒーをおごる
           </a>
         )}
       </div>

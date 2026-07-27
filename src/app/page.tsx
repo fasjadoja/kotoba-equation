@@ -117,8 +117,9 @@ export default function Home() {
               href={SITE.donateUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-block rounded-lg bg-accent px-4 py-2.5 text-[13px] font-semibold text-white transition hover:brightness-110"
+              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-coffee px-4 py-2.5 text-[13px] font-semibold text-[#3B2A12] shadow-[0_2px_10px_rgba(255,169,43,0.35)] transition hover:brightness-105 active:translate-y-px"
             >
+              <span aria-hidden>☕</span>
               開発者にコーヒーをおごる
             </a>
           </section>

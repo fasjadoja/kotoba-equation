@@ -10,19 +10,19 @@ export default {
     extend: {
       colors: {
         /** app shell */
-        ink: "#F1F4F9",
+        ink: "#F2F4F3",
         panel: "#FFFFFF",
-        raised: "#F6F8FC",
-        line: "#E5E9F2",
-        edge: "#D3DAE8",
+        raised: "#F7F8F7",
+        line: "#E5E8E6",
+        edge: "#D4D9D6",
         /** text */
-        fg: "#161C2A",
-        muted: "#586275",
-        faint: "#8792A5",
+        fg: "#151A18",
+        muted: "#55605B",
+        faint: "#8A938E",
         /** accents */
-        accent: "#2B4EE6",
-        accentDark: "#1F3ACC",
-        danger: "#E0463C",
+        accent: "#0E7C66",
+        accentDark: "#0A6152",
+        danger: "#C2453C",
       },
       fontFamily: {
         sans: [
@@ -40,9 +40,9 @@ export default {
         brand: "0.22em",
       },
       boxShadow: {
-        card: "0 1px 2px rgba(16, 24, 40, 0.04), 0 8px 24px rgba(16, 24, 40, 0.05)",
-        lift: "0 2px 4px rgba(16, 24, 40, 0.05), 0 18px 40px rgba(16, 24, 40, 0.09)",
-        field: "inset 0 1px 2px rgba(16, 24, 40, 0.04)",
+        card: "0 1px 2px rgba(18, 26, 22, 0.04), 0 6px 18px rgba(18, 26, 22, 0.04)",
+        lift: "0 2px 4px rgba(18, 26, 22, 0.05), 0 16px 34px rgba(18, 26, 22, 0.08)",
+        field: "inset 0 1px 2px rgba(18, 26, 22, 0.035)",
       },
     },
   },

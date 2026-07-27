@@ -1,5 +1,9 @@
 /** Operators offered in the dropdown. Any single character can be typed instead. */
-export const OPERATORS = ["×", "＋", "−", "÷", "＝", "⇒", "＞", "＜"] as const;
+export const OPERATORS = ["×", "＋", "−", "÷", "＝", "⇒", "＞", "＜", "（", "）"] as const;
+
+/** Brackets hug their neighbour instead of sitting on their own. */
+export const OPEN_BRACKET = "（";
+export const CLOSE_BRACKET = "）";
 
 /** Relation between the left-hand result and the right-hand formula. */
 export const RELATIONS = ["＝", "＞", "＜", "≧", "≦", "≠", "≒", "→"] as const;
@@ -50,6 +54,7 @@ export type FormulaConfig = {
   relation: string;
   elements: FormulaElement[];
   subNote: string;
+  hashtags: string;
   author: string;
   layoutId: LayoutId;
   showCopyright: boolean;
@@ -57,15 +62,22 @@ export type FormulaConfig = {
   fontId: "sans" | "mono";
   sizeId: SizeId;
   showWatermark: boolean;
+  /** Manual nudges on top of the automatic fitting. 1 = automatic. */
+  textScale: number;
+  marginScale: number;
 };
+
+export const TEXT_SCALE = { min: 0.7, max: 1.4, step: 0.05 } as const;
+export const MARGIN_SCALE = { min: 0.5, max: 1.5, step: 0.05 } as const;
 
 export const MAX_ELEMENTS = 8;
 
 export const LIMITS = {
-  resultText: 24,
+  resultText: 50,
   element: 18,
-  subNote: 56,
-  author: 24,
+  subNote: 140,
+  hashtags: 40,
+  author: 50,
   operator: 1,
   relation: 1,
 } as const;
@@ -79,11 +91,14 @@ export const DEFAULT_CONFIG: FormulaConfig = {
     { op: "×", text: "考え方" },
   ],
   subNote: "※考え方（-100〜+100点）が全体の掛け算を決める",
-  author: "@your_account",
+  hashtags: "#ことばの方程式",
+  author: "",
   layoutId: "auto",
   showCopyright: false,
   themeId: "light",
   fontId: "sans",
   sizeId: "x",
   showWatermark: true,
+  textScale: 1,
+  marginScale: 1,
 };

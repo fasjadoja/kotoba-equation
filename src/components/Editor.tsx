@@ -1,24 +1,34 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PRESETS, type Preset } from "@/lib/presets";
+import { PRESETS, PRESET_CATEGORIES, type Preset } from "@/lib/presets";
 import { THEMES } from "@/lib/themes";
 import { CANVAS_FONTS, type CanvasFontId } from "@/lib/fonts";
-import { WORDMARK, drawFormula, renderToBlob, type RenderOptions } from "@/lib/render";
+import {
+  WORDMARK,
+  drawFormula,
+  hashtagText,
+  renderToBlob,
+  type RenderOptions,
+} from "@/lib/render";
 import {
   DEFAULT_CONFIG,
   LAYOUTS,
   LIMITS,
+  MARGIN_SCALE,
   MAX_ELEMENTS,
   OPERATORS,
   RELATIONS,
   SIZES,
+  TEXT_SCALE,
   getSize,
   type FormulaConfig,
   type Operator,
 } from "@/lib/types";
 import { SHARE_HASHTAGS } from "@/lib/site";
-import { useHistory, type HistoryEntry } from "@/hooks/useHistory";
+import { HISTORY_LIMIT, useHistory, type HistoryEntry } from "@/hooks/useHistory";
+import { useGallery } from "@/hooks/useGallery";
+import { GALLERY_LIMIT, galleryText, relativeTime, type GalleryItem } from "@/lib/gallery";
 
 const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
   sans: {
@@ -47,6 +57,7 @@ async function ensureFont(config: FormulaConfig) {
     config.resultText,
     config.relation,
     config.subNote,
+    config.hashtags,
     config.author,
     ...config.elements.map((element) => `${element.op}${element.text}`),
   ].join("");
@@ -81,12 +92,14 @@ function isPresetRelation(relation: string) {
 export default function Editor() {
   const [config, setConfig] = useState<FormulaConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<string | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [canCopy, setCanCopy] = useState(false);
   const [customOps, setCustomOps] = useState<boolean[]>([]);
   const [customRelation, setCustomRelation] = useState(false);
+  const [justUpdated, setJustUpdated] = useState(false);
+  const [makePublic, setMakePublic] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
+  const gallery = useGallery();
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
@@ -117,6 +130,14 @@ export default function Editor() {
     };
   }, [config, size, renderOptions]);
 
+  // On phones the preview sits above the fields, so a short highlight makes it
+  // obvious that typing changed the image.
+  useEffect(() => {
+    setJustUpdated(true);
+    const timer = window.setTimeout(() => setJustUpdated(false), 450);
+    return () => window.clearTimeout(timer);
+  }, [config]);
+
   useEffect(() => {
     if (!status) return;
     const timer = window.setTimeout(() => setStatus(null), 4000);
@@ -138,11 +159,26 @@ export default function Editor() {
     setCustomRelation(!isPresetRelation(preset.relation ?? "＝"));
   };
 
+  const applyGalleryItem = (item: GalleryItem) => {
+    update({
+      resultText: item.resultText,
+      relation: item.relation || "＝",
+      subNote: item.subNote,
+      elements: item.elements.map((element) => ({ ...element })),
+    });
+    setCustomOps(
+      item.elements.map((element) => !!element.op && !isPresetOperator(element.op)),
+    );
+    setCustomRelation(!isPresetRelation(item.relation || "＝"));
+    setStatus("みんなの作品をテンプレとして読み込みました");
+  };
+
   const restore = (entry: HistoryEntry) => {
     update({
       resultText: entry.resultText,
       relation: entry.relation || "＝",
       subNote: entry.subNote,
+      hashtags: entry.hashtags,
       author: entry.author,
       elements: entry.elements.map((element) => ({ ...element })),
     });
@@ -152,8 +188,7 @@ export default function Editor() {
       ),
     );
     setCustomRelation(!isPresetRelation(entry.relation || "＝"));
-    setHistoryOpen(false);
-    setStatus("履歴から復元しました");
+    setStatus("履歴から読み込みました");
   };
 
   const updateElement = (
@@ -196,6 +231,12 @@ export default function Editor() {
     setCustomOps((previous) => previous.filter((_, i) => i !== index));
   };
 
+  /** Local history always; the public gallery only when the user opted in. */
+  const commit = () => {
+    save(config);
+    if (makePublic) void gallery.share(config);
+  };
+
   const downloadImage = async () => {
     await ensureFont(config);
     const blob = await renderToBlob(config, renderOptions);
@@ -214,7 +255,7 @@ export default function Editor() {
       window.open(url, "_blank");
     }
     window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
-    save(config);
+    commit();
     return true;
   };
 
@@ -230,13 +271,21 @@ export default function Editor() {
     setStatus(ok ? "画像を保存しました" : "画像を生成できませんでした");
   };
 
+  const shareTags = () => {
+    const own = hashtagText(config)
+      .split(" ")
+      .map((tag) => tag.replace(/^[#＃]/, ""))
+      .filter(Boolean);
+    return Array.from(new Set([...own, ...SHARE_HASHTAGS]));
+  };
+
   const handleShare = async () => {
     const text = `${config.resultText} ${config.relation || "＝"} ${formulaText()}${
       config.subNote ? `\n\n${config.subNote}` : ""
     }`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       text,
-    )}&hashtags=${encodeURIComponent(SHARE_HASHTAGS.join(","))}`;
+    )}&hashtags=${encodeURIComponent(shareTags().join(","))}`;
     const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
     const ok = await downloadImage();
     if (!shareWindow) {
@@ -260,7 +309,7 @@ export default function Editor() {
         }),
       });
       await navigator.clipboard.write([item]);
-      save(config);
+      commit();
       setStatus("画像をコピーしました");
     } catch {
       setStatus("このブラウザではコピーできません。保存をご利用ください");
@@ -274,7 +323,7 @@ export default function Editor() {
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
-            placeholder="体感の暑さ"
+            placeholder="例：体感の暑さ"
             limit={LIMITS.resultText}
           />
         </Section>
@@ -289,14 +338,14 @@ export default function Editor() {
                 update({ relation: value === CUSTOM_OP ? "" : value });
               }}
               aria-label="関係記号"
-              className={`${fieldClass} w-[84px] shrink-0 px-2 text-center`}
+              className={`${fieldClass} w-[108px] shrink-0 px-2`}
             >
               {RELATIONS.map((relation) => (
                 <option key={relation} value={relation}>
                   {relation}
                 </option>
               ))}
-              <option value={CUSTOM_OP}>･･･</option>
+              <option value={CUSTOM_OP}>直接入力</option>
             </select>
             {customRelation && (
               <input
@@ -331,48 +380,45 @@ export default function Editor() {
                 (!!element.op && !isPresetOperator(element.op));
               return (
                 <div key={index} className="flex items-center gap-1.5">
-                  {index > 0 ? (
-                    <>
-                      <select
-                        value={custom ? CUSTOM_OP : element.op}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setOperatorMode(index, value === CUSTOM_OP);
-                          updateElement(index, {
-                            op: value === CUSTOM_OP ? "" : value,
-                          });
-                        }}
-                        aria-label={`要素 ${index + 1} の演算子`}
-                        className={`${fieldClass} w-[58px] shrink-0 px-1 text-center font-mono`}
-                      >
-                        {OPERATORS.map((op) => (
-                          <option key={op} value={op}>
-                            {op}
-                          </option>
-                        ))}
-                        <option value={CUSTOM_OP}>･･･</option>
-                      </select>
-                      {custom && (
-                        <input
-                          type="text"
-                          value={element.op}
-                          maxLength={LIMITS.operator}
-                          placeholder="＝"
-                          aria-label={`要素 ${index + 1} の演算子を直接入力（1文字）`}
-                          onChange={(e) =>
-                            updateElement(index, {
-                              op: Array.from(e.target.value).slice(-1).join(""),
-                            })
-                          }
-                          className={`${fieldClass} w-[46px] shrink-0 px-1 text-center font-mono`}
-                        />
-                      )}
-                    </>
-                  ) : null}
+                  <select
+                    value={custom ? CUSTOM_OP : element.op}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setOperatorMode(index, value === CUSTOM_OP);
+                      updateElement(index, {
+                        op: value === CUSTOM_OP ? "" : value,
+                      });
+                    }}
+                    aria-label={`要素 ${index + 1} の演算子`}
+                    className={`${fieldClass} w-[94px] shrink-0 px-2`}
+                  >
+                    {index === 0 && <option value="">なし</option>}
+                    {OPERATORS.map((op) => (
+                      <option key={op} value={op}>
+                        {op}
+                      </option>
+                    ))}
+                    <option value={CUSTOM_OP}>直接入力</option>
+                  </select>
+                  {custom && (
+                    <input
+                      type="text"
+                      value={element.op}
+                      maxLength={LIMITS.operator}
+                      placeholder="＝"
+                      aria-label={`要素 ${index + 1} の演算子を直接入力（1文字）`}
+                      onChange={(e) =>
+                        updateElement(index, {
+                          op: Array.from(e.target.value).slice(-1).join(""),
+                        })
+                      }
+                      className={`${fieldClass} w-[46px] shrink-0 px-1 text-center font-mono`}
+                    />
+                  )}
                   <input
                     type="text"
                     value={element.text}
-                    placeholder={`要素 ${index + 1}`}
+                    placeholder={index === 0 ? "例：気温" : "例：湿度"}
                     maxLength={LIMITS.element}
                     onChange={(e) =>
                       updateElement(index, { text: e.target.value })
@@ -384,7 +430,7 @@ export default function Editor() {
                     disabled={config.elements.length <= 1}
                     aria-label={`要素 ${index + 1} を削除`}
                     title="この要素を削除"
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-danger/30 bg-danger/5 text-danger transition hover:border-danger hover:bg-danger hover:text-white disabled:cursor-not-allowed disabled:border-line disabled:bg-raised disabled:text-faint/50"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-faint transition hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:text-faint/35 disabled:hover:bg-transparent disabled:hover:text-faint/35"
                   >
                     <TrashIcon />
                   </button>
@@ -395,30 +441,45 @@ export default function Editor() {
           {config.elements.length < MAX_ELEMENTS && (
             <button
               onClick={addElement}
-              className="mt-1.5 w-full rounded-xl border border-dashed border-edge py-2 text-[12px] font-medium text-accent transition hover:border-accent hover:bg-accent/5"
+              className="mt-1.5 w-full rounded-lg border border-edge py-2 text-[12px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
             >
               ＋ 要素を追加
             </button>
           )}
-          <p className="mt-2 text-[11px] text-faint">
-            演算子はプルダウンから選ぶか、「･･･」を選んで1文字だけ直接入力できます。
+          <p className="mt-2 text-[11px] leading-snug text-faint">
+            演算子はプルダウンから選べます。一覧にない記号は「直接入力」を選ぶと、1文字だけ自由に入力できます。
+            <br />
+            「（」「）」を選ぶと括弧になります（例：200 ＝（3 ＋ 7）× 20）。括弧を閉じるだけの行は、入力欄を空のままにしてください。
           </p>
         </Section>
 
-        <Section index="④" label="補足（下部メッセージ）">
+        <Section index="④" label="補足（画像の下のメッセージ）">
           <Field
             value={config.subNote}
             onChange={(value) => update({ subNote: value })}
-            placeholder="※補足メッセージ"
+            placeholder={"例：※同じ気温でも、湿度が高いほどつらい。\n長い文章も自動で折り返します。"}
             limit={LIMITS.subNote}
+            multiline
           />
         </Section>
 
-        <Section index="⑤" label="アカウント名 / クレジット">
+        <Section index="⑤" label="ハッシュタグ（画像の左下）">
+          <Field
+            value={config.hashtags}
+            onChange={(value) => update({ hashtags: value })}
+            placeholder="例：#ことばの方程式 #思考の整理"
+            limit={LIMITS.hashtags}
+          />
+          <p className="mt-1 text-[11px] leading-snug text-faint">
+            スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
+          </p>
+        </Section>
+
+        <Section index="⑥" label="アカウント名 / クレジット">
           <Field
             value={config.author}
             onChange={(value) => update({ author: value })}
-            placeholder="@your_account"
+            placeholder="例：@your_account（空欄でもOK）"
             limit={LIMITS.author}
           />
           <div className="mt-2.5 space-y-2">
@@ -435,28 +496,35 @@ export default function Editor() {
           </div>
         </Section>
 
+        {gallery.enabled && (
+          <Section index="⑦" label="みんなの作品への掲載（任意）">
+            <Toggle
+              checked={makePublic}
+              onChange={setMakePublic}
+              label="この式を「みんなの作品」に載せる"
+            />
+            <p className="mt-1.5 text-[11px] leading-snug text-faint">
+              チェックしたときだけ、保存・シェア時に式の文字（結果・要素・補足・ハッシュタグ・クレジット）を公開します。チェックを外せば、今までどおりブラウザ内だけで完結します。
+            </p>
+          </Section>
+        )}
+
         <div className="space-y-2 p-3.5">
           <button
             onClick={() => void handleShare()}
-            className="w-full rounded-xl bg-accent px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_6px_18px_rgba(43,78,230,0.28)] transition hover:-translate-y-0.5 hover:bg-accentDark hover:shadow-[0_10px_24px_rgba(43,78,230,0.32)] active:translate-y-0"
+            className={`${actionButtonClass} w-full px-5 py-3.5 text-[14px]`}
           >
             画像を保存して X でシェア
           </button>
           <div
             className={`grid gap-2 ${canCopy ? "grid-cols-2" : "grid-cols-1"}`}
           >
-            <button
-              onClick={() => void handleDownload()}
-              className={secondaryButtonClass}
-            >
-              保存のみ（PNG）
+            <button onClick={() => void handleDownload()} className={actionButtonClass}>
+              画像を保存（PNG）
             </button>
             {canCopy && (
-              <button
-                onClick={() => void handleCopy()}
-                className={secondaryButtonClass}
-              >
-                コピー
+              <button onClick={() => void handleCopy()} className={actionButtonClass}>
+                画像をコピー
               </button>
             )}
           </div>
@@ -466,8 +534,14 @@ export default function Editor() {
         </div>
       </div>
 
-      <div className="order-1 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
-        <div className="rounded-2xl border border-line bg-panel shadow-card">
+      <div className="sticky top-[56px] z-10 order-1 min-w-0 lg:static lg:order-none lg:col-start-2 lg:row-start-1">
+        <div
+          className={`rounded-2xl border bg-panel transition-shadow duration-300 ${
+            justUpdated
+              ? "border-accent/40 shadow-[0_6px_20px_rgba(14,124,102,0.14)]"
+              : "border-line shadow-card"
+          }`}
+        >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
             <div className="flex flex-wrap gap-1">
               {SIZES.map((item) => (
@@ -486,17 +560,20 @@ export default function Editor() {
                 </button>
               ))}
             </div>
-            <span className="font-mono text-[11px] text-faint">
+            <span className="hidden font-mono text-[11px] text-faint sm:inline">
               {size.width} × {size.height} / @2x
             </span>
           </div>
-          <div className="flex w-full items-center justify-center p-4 sm:p-8">
+          <div className="flex w-full items-center justify-center p-3 sm:p-8">
             <canvas
               ref={canvasRef}
               aria-label="生成された思考式の画像"
-              className="max-h-[46vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 lg:max-h-[58vh]"
+              className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 sm:max-h-[42vh] lg:max-h-[58vh]"
             />
           </div>
+          <p className="border-t border-line px-3 py-1.5 text-center text-[11px] text-faint lg:hidden">
+            入力するとこのプレビューにすぐ反映されます（スクロールしても上に残ります）
+          </p>
         </div>
       </div>
 
@@ -541,7 +618,7 @@ export default function Editor() {
                 ))}
               </div>
               <p className="mt-2 text-[11px] leading-snug text-faint">
-                自動なら「1＜2」のような短い式だけ横1行になります。
+                自動はできる限り横1行。入り切らない式だけ上下に分けます。
               </p>
             </Section>
 
@@ -569,61 +646,137 @@ export default function Editor() {
             </Section>
           </div>
 
-          <Section label="テンプレート">
-            <div className="flex flex-wrap gap-1.5">
-              {PRESETS.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => applyPreset(preset)}
-                  className="rounded-full border border-edge bg-panel px-3 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:bg-accent/5 hover:text-accent"
-                >
-                  {preset.label}
-                </button>
+          <Section
+            label="微調整（自動レイアウトの上書き）"
+            hint={
+              config.textScale !== 1 || config.marginScale !== 1
+                ? "調整中"
+                : undefined
+            }
+          >
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Slider
+                label="文字の大きさ"
+                value={config.textScale}
+                range={TEXT_SCALE}
+                onChange={(value) => update({ textScale: value })}
+              />
+              <Slider
+                label="左右の余白"
+                value={config.marginScale}
+                range={MARGIN_SCALE}
+                onChange={(value) => update({ marginScale: value })}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <p className="text-[11px] leading-snug text-faint">
+                文字数が多い式は自動で縮小されます。もう少し大きく／余白を狭くしたいときだけ動かしてください（はみ出す手前で自動的に止まります）。
+              </p>
+              <button
+                onClick={() => update({ textScale: 1, marginScale: 1 })}
+                disabled={config.textScale === 1 && config.marginScale === 1}
+                className="shrink-0 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/50 disabled:hover:text-faint/50"
+              >
+                リセット
+              </button>
+            </div>
+          </Section>
+
+          <Section label="テンプレート（有名な方程式）">
+            <div className="space-y-3">
+              {PRESET_CATEGORIES.map((category) => (
+                <div key={category}>
+                  <p className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-faint">
+                    {category}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {PRESETS.filter((preset) => preset.category === category).map(
+                      (preset) => (
+                        <button
+                          key={preset.id}
+                          onClick={() => applyPreset(preset)}
+                          title={preset.subNote}
+                          className={chipClass}
+                        >
+                          {preset.label}
+                        </button>
+                      ),
+                    )}
+                  </div>
+                </div>
               ))}
             </div>
           </Section>
 
-          <Section label="履歴">
+          <Section
+            label="直近の履歴"
+            hint={entries.length > 0 ? `${entries.length} / ${HISTORY_LIMIT}` : undefined}
+          >
             {entries.length === 0 ? (
               <p className="text-[11px] text-faint">
-                保存すると直近5件がここに残ります。
+                画像を保存すると、直近{HISTORY_LIMIT}件がここに残ります（テンプレとして使えます）。
               </p>
             ) : (
               <>
+                <p className="mb-1.5 text-[11px] text-faint">
+                  クリックすると、その式をテンプレとして読み込みます。
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {entries.map((entry) => (
+                    <button
+                      key={entry.id}
+                      onClick={() => restore(entry)}
+                      className={`${chipClass} max-w-full truncate`}
+                      title={summarize(entry)}
+                    >
+                      {summarize(entry)}
+                    </button>
+                  ))}
+                </div>
                 <button
-                  onClick={() => setHistoryOpen((open) => !open)}
-                  className="text-[11px] text-accent transition hover:underline"
+                  onClick={clear}
+                  className="mt-2 text-[11px] text-faint transition hover:text-danger"
                 >
-                  {historyOpen
-                    ? "▾ 閉じる"
-                    : `▸ 直近の${entries.length}件を表示`}
+                  履歴を削除
                 </button>
-                {historyOpen && (
-                  <ul className="mt-2 space-y-1">
-                    {entries.map((entry) => (
-                      <li key={entry.id}>
-                        <button
-                          onClick={() => restore(entry)}
-                          className="w-full truncate rounded-lg border border-line bg-raised px-3 py-2 text-left text-[11px] text-muted transition hover:border-accent/50 hover:text-fg"
-                          title={summarize(entry)}
-                        >
-                          {summarize(entry)}
-                        </button>
-                      </li>
-                    ))}
-                    <li>
-                      <button
-                        onClick={clear}
-                        className="text-[11px] text-danger/80 transition hover:text-danger"
-                      >
-                        履歴を削除
-                      </button>
-                    </li>
-                  </ul>
-                )}
               </>
             )}
           </Section>
+
+          {gallery.enabled && (
+            <Section
+              label={`みんなの作品（最新${GALLERY_LIMIT}件・リアルタイム）`}
+              hint={gallery.items.length > 0 ? `${gallery.items.length}` : undefined}
+            >
+              {gallery.loading ? (
+                <p className="text-[11px] text-faint">読み込み中…</p>
+              ) : gallery.items.length === 0 ? (
+                <p className="text-[11px] text-faint">
+                  まだ公開された式はありません。上の⑦でチェックすると、ここに並びます。
+                </p>
+              ) : (
+                <ul className="space-y-1">
+                  {gallery.items.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => applyGalleryItem(item)}
+                        className="flex w-full items-center justify-between gap-3 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
+                        title={item.subNote || galleryText(item)}
+                      >
+                        <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
+                          {galleryText(item)}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-faint">
+                          {item.author ? `${item.author}・` : ""}
+                          {relativeTime(item.createdAt)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Section>
+          )}
         </div>
       </div>
     </div>
@@ -632,10 +785,45 @@ export default function Editor() {
 
 // text-base on mobile keeps iOS Safari from zooming in when a field is focused.
 const fieldClass =
-  "h-10 rounded-xl border border-edge bg-raised px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/40 focus:border-accent focus:bg-panel focus:shadow-none focus:ring-2 focus:ring-accent/20 sm:text-[13px]";
+  "h-10 rounded-lg border border-edge bg-raised px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/40 focus:border-accent focus:bg-panel focus:shadow-none focus:ring-2 focus:ring-accent/15 sm:text-[13px]";
 
-const secondaryButtonClass =
-  "rounded-xl border border-edge bg-panel px-4 py-2.5 text-[13px] font-medium text-muted shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:text-accent";
+const chipClass =
+  "rounded-md border border-edge bg-panel px-2.5 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:text-accent";
+
+function Slider({
+  label,
+  value,
+  range,
+  onChange,
+}: {
+  label: string;
+  value: number;
+  range: { min: number; max: number; step: number };
+  onChange: (value: number) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="flex items-baseline justify-between text-[12px] text-muted">
+        {label}
+        <span className="font-mono text-[11px] text-faint">
+          {Math.round(value * 100)}%
+        </span>
+      </span>
+      <input
+        type="range"
+        min={range.min}
+        max={range.max}
+        step={range.step}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="mt-1.5 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
+      />
+    </label>
+  );
+}
+
+const actionButtonClass =
+  "rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(14,124,102,0.20)] transition hover:bg-accentDark active:translate-y-px";
 
 function TrashIcon() {
   return (
@@ -656,23 +844,37 @@ function Field({
   onChange,
   placeholder,
   limit,
+  multiline = false,
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   limit: number;
+  /** Long copy is easier to proofread in a box that grows downwards. */
+  multiline?: boolean;
 }) {
   const count = countOf(value);
   return (
     <div>
-      <input
-        type="text"
-        value={value}
-        maxLength={limit}
-        placeholder={placeholder}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${fieldClass} w-full`}
-      />
+      {multiline ? (
+        <textarea
+          value={value}
+          maxLength={limit}
+          placeholder={placeholder}
+          rows={3}
+          onChange={(e) => onChange(e.target.value.replace(/\n/g, ""))}
+          className={`${fieldClass} h-auto w-full resize-y py-2 leading-relaxed`}
+        />
+      ) : (
+        <input
+          type="text"
+          value={value}
+          maxLength={limit}
+          placeholder={placeholder}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${fieldClass} w-full`}
+        />
+      )}
       <p
         className={`mt-1 text-right font-mono text-[10px] ${
           count >= limit ? "text-accent" : "text-faint"
@@ -723,8 +925,8 @@ function Section({
         <h2
           className={
             index
-              ? "flex items-center gap-1.5 text-[12px] font-medium text-fg"
-              : "text-[11px] font-medium text-muted"
+              ? "flex items-center gap-1.5 text-[12px] font-semibold text-fg"
+              : "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint"
           }
         >
           {index && <span className="text-accent">{index}</span>}

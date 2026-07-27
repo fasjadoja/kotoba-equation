@@ -19,7 +19,7 @@ export default function SiteHeader() {
     <header
       className={`sticky top-0 z-20 border-b transition-all duration-300 ${
         scrolled
-          ? "border-line bg-panel/85 shadow-[0_1px_16px_rgba(16,24,40,0.06)] backdrop-blur-md"
+          ? "border-line bg-panel/85 shadow-[0_1px_12px_rgba(18,26,22,0.05)] backdrop-blur-md"
           : "border-transparent bg-transparent"
       }`}
     >
@@ -34,7 +34,7 @@ export default function SiteHeader() {
             href={SITE.donateUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-full border border-edge bg-panel px-3.5 py-1.5 text-[12px] font-medium text-muted shadow-sm transition hover:-translate-y-0.5 hover:border-accent/40 hover:text-accent"
+            className="rounded-full border border-edge bg-panel px-3.5 py-1.5 text-[12px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
           >
             ☕︎ 寄付で応援する
           </a>

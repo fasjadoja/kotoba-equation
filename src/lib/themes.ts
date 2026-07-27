@@ -7,7 +7,6 @@ export type Theme = {
   title: string;
   equals: string;
   element: string;
-  highlight: string;
   operator: string;
   note: string;
   author: string;
@@ -16,34 +15,46 @@ export type Theme = {
 
 export const THEMES: Theme[] = [
   {
-    id: "light",
-    name: "ライト",
-    background: "#ffffff",
-    frame: "#e6e6e6",
-    brand: "#a3a3a3",
-    title: "#111111",
-    equals: "#c4c4c4",
-    element: "#111111",
-    highlight: "#111111",
-    operator: "#b0b0b0",
-    note: "#8a8a8a",
-    author: "#b0b0b0",
-    swatch: "#ffffff",
+    id: "paper",
+    name: "Paper",
+    background: "#F6F4EF",
+    frame: "#DCD7CB",
+    brand: "#A8A093",
+    title: "#1B1A16",
+    equals: "#C3BCAC",
+    element: "#1B1A16",
+    operator: "#A8A093",
+    note: "#877F71",
+    author: "#A8A093",
+    swatch: "#F6F4EF",
   },
   {
-    id: "dark",
-    name: "ダーク",
-    background: "#101010",
-    frame: "#2a2a2a",
-    brand: "#6f6f6f",
-    title: "#fafafa",
-    equals: "#4a4a4a",
-    element: "#fafafa",
-    highlight: "#fafafa",
-    operator: "#767676",
-    note: "#8f8f8f",
-    author: "#6f6f6f",
-    swatch: "#101010",
+    id: "blanc",
+    name: "Blanc",
+    background: "#FFFFFF",
+    frame: "#E8E8E6",
+    brand: "#B0AFAB",
+    title: "#111111",
+    equals: "#CFCECA",
+    element: "#111111",
+    operator: "#B0AFAB",
+    note: "#8A8985",
+    author: "#B0AFAB",
+    swatch: "#FFFFFF",
+  },
+  {
+    id: "ink",
+    name: "Ink",
+    background: "#14140F",
+    frame: "#302F27",
+    brand: "#6C6A5E",
+    title: "#F4F2EC",
+    equals: "#4A493F",
+    element: "#F4F2EC",
+    operator: "#807D70",
+    note: "#948F80",
+    author: "#6C6A5E",
+    swatch: "#14140F",
   },
 ];
 

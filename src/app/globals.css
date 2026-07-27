@@ -2,9 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background-color: #ffffff;
-  color: #111111;
-  font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
-    Meiryo, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #fbfaf7;
+  color: #1b1a16;
+  font-family: var(--font-gothic), -apple-system, BlinkMacSystemFont, "Hiragino Sans",
+    "Yu Gothic", Meiryo, sans-serif;
+  font-feature-settings: "palt" 1;
+}
+
+input,
+select,
+button,
+textarea {
+  font-family: inherit;
 }

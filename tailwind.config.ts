@@ -9,8 +9,27 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: "var(--background)",
-        foreground: "var(--foreground)",
+        /** warm greige stage the canvas sits on */
+        stage: "#EFEDE7",
+        paper: "#FBFAF7",
+        ink: "#1B1A16",
+        muted: "#8C877B",
+        faint: "#B4AEA1",
+        line: "#DFDACE",
+      },
+      fontFamily: {
+        display: ["var(--font-display)", "Georgia", "serif"],
+        sans: [
+          "var(--font-gothic)",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Hiragino Sans",
+          "Yu Gothic",
+          "sans-serif",
+        ],
+      },
+      letterSpacing: {
+        brand: "0.36em",
       },
     },
   },

@@ -27,6 +27,8 @@ import {
 } from "@/lib/types";
 import { SHARE_HASHTAGS } from "@/lib/site";
 import { HISTORY_LIMIT, useHistory, type HistoryEntry } from "@/hooks/useHistory";
+import { useDraft } from "@/hooks/useDraft";
+import { useSupporter } from "@/hooks/useSupporter";
 import { useGallery } from "@/hooks/useGallery";
 import { GALLERY_LIMIT, galleryText, relativeTime, type GalleryItem } from "@/lib/gallery";
 
@@ -101,6 +103,17 @@ export default function Editor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
+  const supporter = useSupporter();
+
+  const adoptConfig = useCallback((next: FormulaConfig) => {
+    setConfig(next);
+    setCustomOps(
+      next.elements.map((element) => !!element.op && !isPresetOperator(element.op)),
+    );
+    setCustomRelation(!isPresetRelation(next.relation || "＝"));
+  }, []);
+
+  const { remember, forget } = useDraft(adoptConfig);
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
@@ -148,6 +161,22 @@ export default function Editor() {
   const update = useCallback((patch: Partial<FormulaConfig>) => {
     setConfig((previous) => ({ ...previous, ...patch }));
   }, []);
+
+  useEffect(() => remember(config), [config, remember]);
+
+  // The gold lockup is only offered while the supporter window is open.
+  useEffect(() => {
+    if (!supporter.active && config.premiumLogo) update({ premiumLogo: false });
+  }, [supporter.active, config.premiumLogo, update]);
+
+  const resetAll = () => {
+    adoptConfig({
+      ...DEFAULT_CONFIG,
+      elements: DEFAULT_CONFIG.elements.map((element) => ({ ...element })),
+    });
+    forget();
+    setStatus("入力を初期状態に戻しました");
+  };
 
   const applyPreset = (preset: Preset) => {
     update({
@@ -319,7 +348,32 @@ export default function Editor() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
+    <>
+      {supporter.justUnlocked && (
+        <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#E4C97A] bg-[#FFF8E7] p-4 shadow-card">
+          <span className="mt-0.5 text-[18px]" aria-hidden>
+            ✦
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[13px] font-semibold text-[#7A5A10]">
+              ご支援ありがとうございます。サポーター限定のゴールドロゴを解錠しました。
+            </p>
+            <p className="mt-1 text-[12px] leading-relaxed text-[#8A6A1C]">
+              これから{Math.max(1, supporter.hoursLeft)}
+              時間のあいだ、⑥の「ゴールドのロゴにする」をONにすると、画像のロゴが金色（✦
+              SUPPORTER 付き）になります。設定はこのブラウザにだけ保存されます。
+            </p>
+          </div>
+          <button
+            onClick={supporter.dismiss}
+            aria-label="このお知らせを閉じる"
+            className="shrink-0 rounded-md px-2 py-1 text-[12px] text-[#8A6A1C] transition hover:bg-[#F3E3B8]"
+          >
+            閉じる
+          </button>
+        </div>
+      )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
       <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
         <Section index="①" label="結果（左側）">
           <Field
@@ -495,6 +549,19 @@ export default function Editor() {
               onChange={(checked) => update({ showWatermark: checked })}
               label="「ことばの方程式」のロゴを入れる"
             />
+            {supporter.active && (
+              <>
+                <Toggle
+                  checked={config.premiumLogo}
+                  onChange={(checked) => update({ premiumLogo: checked })}
+                  label="ゴールドのロゴにする（サポーター限定）"
+                />
+                <p className="text-[11px] leading-snug text-[#8A6A1C]">
+                  ✦ 解錠中：あと約{supporter.hoursLeft}
+                  時間。ロゴが金色になり、「✦ SUPPORTER」が並びます。
+                </p>
+              </>
+            )}
           </div>
         </Section>
 
@@ -547,6 +614,17 @@ export default function Editor() {
           <p className="h-4 text-center text-[11px] text-accent">
             {status ?? ""}
           </p>
+          <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
+            <p className="text-[11px] leading-snug text-faint">
+              入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
+            </p>
+            <button
+              onClick={resetAll}
+              className="shrink-0 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
+            >
+              入力をリセット
+            </button>
+          </div>
         </div>
       </div>
 
@@ -797,7 +875,8 @@ export default function Editor() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 

@@ -7,3 +7,16 @@ export const SITE = {
 };
 
 export const SHARE_HASHTAGS = ["ことばの方程式"];
+
+/**
+ * Token appended to the donation page's thank-you redirect
+ * (`{SITE.url}/?thanks={SUPPORTER_KEY}`). It only gates a cosmetic logo, so a
+ * shared secret in the bundle is a deliberate trade-off against needing a
+ * backend and payment webhooks.
+ */
+export const SUPPORTER_KEY =
+  process.env.NEXT_PUBLIC_SUPPORTER_KEY ?? "coffee-thanks";
+
+/** How long the supporter logo stays unlocked after coming back. */
+export const SUPPORTER_WINDOW_MS = 24 * 60 * 60 * 1000;
+

@@ -15,6 +15,8 @@
 | 書き出し | 2倍解像度のPNG保存、クリップボードコピー（対応ブラウザのみ） |
 | 共有 | 「画像を保存してXでシェア」でダウンロードとX投稿画面を同時に起動 |
 | 履歴 | 直近8件を localStorage に保存（⑦で保存の有無を切り替え可）。クリックで自分のテンプレとして読み込める |
+| 下書き | 入力中の内容を localStorage に自動保存し、次回訪問時に復元。「入力をリセット」で初期状態に戻せる |
+| サポーター特典 | 寄付ページから戻ると24時間だけ、画像のロゴがゴールド（✦ SUPPORTER 付き）になる |
 | みんなの作品 | 任意公開。チェックした式だけを保存し、最新20件をリアルタイム表示（Supabaseを設定したときのみ有効） |
 | 関係記号 | 左側と右側をつなぐ `＝ ＞ ＜ ≧ ≦ ≠ ≒ →` をプルダウンから選択。1文字だけ直接入力もできる |
 | 演算子 | `× ＋ − ÷ ＝ ⇒ ＞ ＜ （ ）` をプルダウンから選択。「直接入力」を選ぶと1文字だけ自由に入力できる。括弧で `200 ＝（3 ＋ 7）× 20` のような式も作れる |
@@ -72,6 +74,7 @@ npm run dev
 | `NEXT_PUBLIC_SITE_URL` | 公開URL（OGP・sitemap・canonical に使用） |
 | `NEXT_PUBLIC_DONATE_URL` | 寄付ページのURL。未設定なら寄付リンクは表示されません |
 | `NEXT_PUBLIC_CONTACT_URL` | 問い合わせ先URL（任意） |
+| `NEXT_PUBLIC_SUPPORTER_KEY` | サポーター特典を解錠する合い言葉（未設定なら `coffee-thanks`） |
 | `NEXT_PUBLIC_SUPABASE_URL` | 「みんなの作品」用 Supabase プロジェクトURL。未設定なら公開機能ごと非表示 |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | 同じプロジェクトの anon key（公開前提のキー。RLSで保護） |
 
@@ -82,6 +85,14 @@ npm run dev
 3. Project Settings → API の URL と anon key を上記の環境変数に設定
 
 公開されるのはユーザーがチェックした式だけ。保存するのは式の文字（結果・関係記号・要素・補足・ハッシュタグ・クレジット）だけで、IPや端末情報は保存しません。
+
+### サポーター特典（ゴールドのロゴ）
+
+1. `NEXT_PUBLIC_SUPPORTER_KEY` に推測されにくい文字列を設定
+2. 寄付サービスのサンクスページ（支援後の戻り先）を `https://<ドメイン>/?thanks=<同じ値>` に設定
+3. 戻ってきた人には解錠を知らせる帯が出て、⑥に「ゴールドのロゴにする」が24時間だけ現れる
+
+決済の検証は行っていません（サーバーWebhookが必要になるため）。URLを知っていれば誰でも解錠できる、お礼の演出としての仕組みです。
 
 ## デプロイと負荷
 
@@ -103,6 +114,6 @@ npm run dev
 src/app          ページ（トップ / 利用規約 / プライバシー / sitemap / robots）
 src/components   Editor（UI）, Logo, SiteHeader, Reveal
 src/lib          render.ts（描画エンジン）, logo.ts, presets.ts, themes.ts, types.ts, site.ts
-src/hooks        useHistory.ts（localStorage 履歴）, useGallery.ts（任意公開ギャラリー）
+src/hooks        useHistory.ts（履歴）, useDraft.ts（下書き復元）, useSupporter.ts（寄付後の特典）, useGallery.ts（任意公開ギャラリー）
 supabase         schema.sql（ギャラリー用のテーブル定義）
 ```

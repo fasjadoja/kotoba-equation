@@ -7,7 +7,7 @@ import {
   type FormulaElement,
 } from "./types";
 import { getTheme } from "./themes";
-import { drawLogoMark } from "./logo";
+import { SUPPORTER_INK, drawLogoMark, supporterGradient } from "./logo";
 
 export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
@@ -421,11 +421,32 @@ export function drawFormula(
   ctx.textBaseline = "middle";
   if (config.showWatermark) {
     const markSize = 20 * base;
-    drawLogoMark(ctx, marginX, headerY - markSize / 2, markSize, theme.accent, theme.onAccent);
+    const markY = headerY - markSize / 2;
+    const premium = config.premiumLogo;
+    drawLogoMark(
+      ctx,
+      marginX,
+      markY,
+      markSize,
+      premium ? supporterGradient(ctx, marginX, markY, markSize) : theme.accent,
+      theme.onAccent,
+    );
     ctx.textAlign = "left";
-    ctx.fillStyle = theme.brand;
+    ctx.fillStyle = premium ? SUPPORTER_INK : theme.brand;
     ctx.font = font(normalWeight, 13 * base, fontStack);
-    fillTracked(ctx, WORDMARK, marginX + markSize + 8 * base, headerY, 1.2 * base);
+    const wordX = marginX + markSize + 8 * base;
+    fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
+    if (premium) {
+      const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
+      ctx.font = font(normalWeight, 9.5 * base, fontStack);
+      fillTracked(
+        ctx,
+        "✦ SUPPORTER",
+        wordX + wordWidth + 9 * base,
+        headerY,
+        1.6 * base,
+      );
+    }
   }
 
   const availableTop = headerY + 34 * base;

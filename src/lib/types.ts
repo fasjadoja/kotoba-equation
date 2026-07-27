@@ -62,6 +62,8 @@ export type FormulaConfig = {
   fontId: "sans" | "mono";
   sizeId: SizeId;
   showWatermark: boolean;
+  /** Gold supporter lockup, unlocked for a day after a donation. */
+  premiumLogo: boolean;
   /** Manual nudges on top of the automatic fitting. 1 = automatic. */
   textScale: number;
   marginScale: number;
@@ -99,6 +101,7 @@ export const DEFAULT_CONFIG: FormulaConfig = {
   fontId: "sans",
   sizeId: "x",
   showWatermark: true,
+  premiumLogo: false,
   textScale: 1,
   marginScale: 1,
 };

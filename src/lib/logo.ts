@@ -42,13 +42,29 @@ function roundedRect(
   ctx.fill();
 }
 
+/** Gold lockup printed for supporters, in place of the flat accent fill. */
+export function supporterGradient(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+): CanvasGradient {
+  const gradient = ctx.createLinearGradient(x, y, x + size, y + size);
+  gradient.addColorStop(0, "#E9CD7E");
+  gradient.addColorStop(0.45, "#C9A227");
+  gradient.addColorStop(1, "#8C6A12");
+  return gradient;
+}
+
+export const SUPPORTER_INK = "#A98220";
+
 /** Draws the mark with its top-left corner at (x, y). */
 export function drawLogoMark(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
   size: number,
-  accent: string,
+  accent: string | CanvasGradient,
   onAccent: string,
 ) {
   const k = size / MARK_GRID;

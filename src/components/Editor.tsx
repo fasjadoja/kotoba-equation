@@ -19,8 +19,16 @@ import { SHARE_HASHTAGS } from "@/lib/site";
 import { useHistory, type HistoryEntry } from "@/hooks/useHistory";
 
 const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
-  sans: { fontStack: CANVAS_FONTS.sans.stack, strongWeight: "600", normalWeight: "400" },
-  mono: { fontStack: CANVAS_FONTS.mono.stack, strongWeight: "500", normalWeight: "400" },
+  sans: {
+    fontStack: CANVAS_FONTS.sans.stack,
+    strongWeight: "600",
+    normalWeight: "400",
+  },
+  mono: {
+    fontStack: CANVAS_FONTS.mono.stack,
+    strongWeight: "500",
+    normalWeight: "400",
+  },
 };
 
 const CUSTOM_OP = "__custom__";
@@ -44,7 +52,10 @@ async function ensureFont(config: FormulaConfig) {
     await Promise.all(
       families.flatMap((family) => [
         document.fonts.load(`${options.strongWeight} 48px ${family}`, text),
-        document.fonts.load(`${options.normalWeight} 20px ${family}`, `${text} FORMULASTUDIO©`),
+        document.fonts.load(
+          `${options.normalWeight} 20px ${family}`,
+          `${text} FORMULASTUDIO©`,
+        ),
       ]),
     );
   } catch {
@@ -124,12 +135,19 @@ export default function Editor() {
       author: entry.author,
       elements: entry.elements.map((element) => ({ ...element })),
     });
-    setCustomOps(entry.elements.map((element) => !!element.op && !isPresetOperator(element.op)));
+    setCustomOps(
+      entry.elements.map(
+        (element) => !!element.op && !isPresetOperator(element.op),
+      ),
+    );
     setHistoryOpen(false);
     setStatus("履歴から復元しました");
   };
 
-  const updateElement = (index: number, patch: Partial<{ op: Operator; text: string }>) => {
+  const updateElement = (
+    index: number,
+    patch: Partial<{ op: Operator; text: string }>,
+  ) => {
     setConfig((previous) => ({
       ...previous,
       elements: previous.elements.map((element, i) =>
@@ -150,7 +168,10 @@ export default function Editor() {
     setConfig((previous) =>
       previous.elements.length >= MAX_ELEMENTS
         ? previous
-        : { ...previous, elements: [...previous.elements, { op: "×", text: "" }] },
+        : {
+            ...previous,
+            elements: [...previous.elements, { op: "×", text: "" }],
+          },
     );
   };
 
@@ -187,7 +208,9 @@ export default function Editor() {
 
   const formulaText = () =>
     config.elements
-      .map((element, index) => (index === 0 ? element.text : `${element.op} ${element.text}`))
+      .map((element, index) =>
+        index === 0 ? element.text : `${element.op} ${element.text}`,
+      )
       .join(" ");
 
   const handleDownload = async () => {
@@ -205,10 +228,14 @@ export default function Editor() {
     const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
     const ok = await downloadImage();
     if (!shareWindow) {
-      setStatus("ポップアップがブロックされました。保存した画像を手動で投稿してください");
+      setStatus(
+        "ポップアップがブロックされました。保存した画像を手動で投稿してください",
+      );
       return;
     }
-    setStatus(ok ? "画像を保存しました。Xの投稿画面に貼り付けてください" : null);
+    setStatus(
+      ok ? "画像を保存しました。Xの投稿画面に貼り付けてください" : null,
+    );
   };
 
   const handleCopy = async () => {
@@ -229,65 +256,9 @@ export default function Editor() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_352px] lg:items-start">
-      <div className="min-w-0 lg:sticky lg:top-4">
-        <div className="rounded-lg border border-line bg-panel">
-          <div className="flex items-center justify-between border-b border-line px-3 py-2">
-            <span className="font-mono text-[11px] text-faint">
-              {size.width} × {size.height}
-              <span className="text-edge"> / </span>@2x
-            </span>
-            <span className="font-mono text-[11px] text-accent">{status ?? ""}</span>
-          </div>
-          <div className="flex w-full items-center justify-center p-4 sm:p-8">
-            <canvas
-              ref={canvasRef}
-              aria-label="生成された思考式の画像"
-              className="max-h-[46vh] w-auto max-w-full rounded-[2px] border border-edge shadow-[0_8px_32px_rgba(0,0,0,0.5)] lg:max-h-[62vh]"
-            />
-          </div>
-        </div>
-
-        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-          <button
-            onClick={() => void handleShare()}
-            className="flex-1 rounded-md bg-fg px-5 py-2.5 text-[13px] font-medium text-ink transition hover:bg-white"
-          >
-            画像を保存して X でシェア
-          </button>
-          <button onClick={() => void handleDownload()} className={secondaryButtonClass}>
-            保存のみ
-          </button>
-          {canCopy && (
-            <button onClick={() => void handleCopy()} className={secondaryButtonClass}>
-              コピー
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div className="min-w-0 divide-y divide-line rounded-lg border border-line bg-panel">
-        <Section label="Format">
-          <div className="grid grid-cols-3 gap-1.5">
-            {SIZES.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => update({ sizeId: item.id })}
-                aria-pressed={config.sizeId === item.id}
-                className={`rounded-md border px-2 py-2 text-center transition ${
-                  config.sizeId === item.id
-                    ? "border-accent/60 bg-accent/10 text-fg"
-                    : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
-                }`}
-              >
-                <span className="block font-mono text-[11px]">{item.label}</span>
-                <span className="mt-0.5 block text-[10px] text-faint">{item.hint}</span>
-              </button>
-            ))}
-          </div>
-        </Section>
-
-        <Section label="Result">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
+      <div className="order-2 min-w-0 divide-y divide-line rounded-lg border border-line bg-panel lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <Section index="①" label="結果（＝の左側）">
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
@@ -296,10 +267,16 @@ export default function Editor() {
           />
         </Section>
 
-        <Section label="Elements" hint={`${config.elements.length} / ${MAX_ELEMENTS}`}>
+        <Section
+          index="②"
+          label="右側の要素（四則演算）"
+          hint={`${config.elements.length} / ${MAX_ELEMENTS}`}
+        >
           <div className="space-y-1.5">
             {config.elements.map((element, index) => {
-              const custom = customOps[index] ?? (!!element.op && !isPresetOperator(element.op));
+              const custom =
+                customOps[index] ??
+                (!!element.op && !isPresetOperator(element.op));
               return (
                 <div key={index} className="flex items-center gap-1.5">
                   {index > 0 ? (
@@ -309,7 +286,9 @@ export default function Editor() {
                         onChange={(e) => {
                           const value = e.target.value;
                           setOperatorMode(index, value === CUSTOM_OP);
-                          updateElement(index, { op: value === CUSTOM_OP ? "" : value });
+                          updateElement(index, {
+                            op: value === CUSTOM_OP ? "" : value,
+                          });
                         }}
                         aria-label={`要素 ${index + 1} の演算子`}
                         className={`${fieldClass} w-[58px] shrink-0 px-1 text-center font-mono`}
@@ -337,15 +316,15 @@ export default function Editor() {
                         />
                       )}
                     </>
-                  ) : (
-                    <span className="w-[58px] shrink-0" />
-                  )}
+                  ) : null}
                   <input
                     type="text"
                     value={element.text}
                     placeholder={`要素 ${index + 1}`}
                     maxLength={LIMITS.element}
-                    onChange={(e) => updateElement(index, { text: e.target.value })}
+                    onChange={(e) =>
+                      updateElement(index, { text: e.target.value })
+                    }
                     className={`${fieldClass} min-w-0 flex-1`}
                   />
                   <button
@@ -374,7 +353,7 @@ export default function Editor() {
           </p>
         </Section>
 
-        <Section label="Note">
+        <Section index="③" label="補足（下部メッセージ）">
           <Field
             value={config.subNote}
             onChange={(value) => update({ subNote: value })}
@@ -383,7 +362,7 @@ export default function Editor() {
           />
         </Section>
 
-        <Section label="Credit">
+        <Section index="④" label="アカウント名 / クレジット">
           <Field
             value={config.author}
             onChange={(value) => update({ author: value })}
@@ -404,99 +383,174 @@ export default function Editor() {
           </div>
         </Section>
 
-        <Section label="Typeface">
-          <div className="grid grid-cols-2 gap-1.5">
-            {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
+        <div className="space-y-2 p-3.5">
+          <button
+            onClick={() => void handleShare()}
+            className="w-full rounded-md bg-fg px-5 py-3 text-[13px] font-medium text-ink transition hover:bg-white"
+          >
+            画像を保存して X でシェア
+          </button>
+          <div
+            className={`grid gap-2 ${canCopy ? "grid-cols-2" : "grid-cols-1"}`}
+          >
+            <button
+              onClick={() => void handleDownload()}
+              className={secondaryButtonClass}
+            >
+              保存のみ（PNG）
+            </button>
+            {canCopy && (
               <button
-                key={id}
-                onClick={() => update({ fontId: id })}
-                aria-pressed={config.fontId === id}
-                className={`rounded-md border px-3 py-2 font-mono text-[11px] transition ${
-                  config.fontId === id
-                    ? "border-accent/60 bg-accent/10 text-fg"
-                    : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
-                }`}
+                onClick={() => void handleCopy()}
+                className={secondaryButtonClass}
               >
-                {CANVAS_FONTS[id].label}
+                コピー
               </button>
-            ))}
+            )}
           </div>
-        </Section>
+          <p className="h-4 text-center font-mono text-[11px] text-accent">
+            {status ?? ""}
+          </p>
+        </div>
+      </div>
 
-        <Section label="Palette">
-          <div className="grid grid-cols-3 gap-1.5">
-            {THEMES.map((theme) => (
-              <button
-                key={theme.id}
-                onClick={() => update({ themeId: theme.id })}
-                aria-pressed={config.themeId === theme.id}
-                className={`flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-[11px] transition ${
-                  config.themeId === theme.id
-                    ? "border-accent/60 bg-accent/10 text-fg"
-                    : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
-                }`}
-              >
-                <span
-                  className="h-2.5 w-2.5 rounded-[2px] border border-edge"
-                  style={{ backgroundColor: theme.swatch }}
-                />
-                {theme.name}
-              </button>
-            ))}
+      <div className="order-1 min-w-0 lg:order-none lg:col-start-2 lg:row-start-1">
+        <div className="rounded-lg border border-line bg-panel">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
+            <div className="flex flex-wrap gap-1">
+              {SIZES.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={() => update({ sizeId: item.id })}
+                  aria-pressed={config.sizeId === item.id}
+                  title={item.hint}
+                  className={`rounded-md border px-2.5 py-1 font-mono text-[11px] transition ${
+                    config.sizeId === item.id
+                      ? "border-accent/60 bg-accent/10 text-fg"
+                      : "border-transparent text-faint hover:border-line hover:text-fg"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <span className="font-mono text-[11px] text-faint">
+              {size.width} × {size.height}
+              <span className="text-edge"> / </span>@2x
+            </span>
           </div>
-        </Section>
-
-        <Section label="Templates">
-          <div className="flex flex-wrap gap-1.5">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => applyPreset(preset)}
-                className="rounded-md border border-line bg-raised px-2.5 py-1.5 text-[11px] text-muted transition hover:border-edge hover:text-fg"
-              >
-                {preset.label}
-              </button>
-            ))}
+          <div className="flex w-full items-center justify-center p-4 sm:p-8">
+            <canvas
+              ref={canvasRef}
+              aria-label="生成された思考式の画像"
+              className="max-h-[46vh] w-auto max-w-full rounded-[2px] border border-edge shadow-[0_8px_32px_rgba(0,0,0,0.5)] lg:max-h-[58vh]"
+            />
           </div>
-        </Section>
+        </div>
+      </div>
 
-        <Section label="History">
-          {entries.length === 0 ? (
-            <p className="text-[11px] text-faint">保存すると直近5件がここに残ります。</p>
-          ) : (
-            <>
-              <button
-                onClick={() => setHistoryOpen((open) => !open)}
-                className="font-mono text-[11px] text-muted transition hover:text-fg"
-              >
-                {historyOpen ? "▾ 閉じる" : `▸ 直近の${entries.length}件を表示`}
-              </button>
-              {historyOpen && (
-                <ul className="mt-2 space-y-1">
-                  {entries.map((entry) => (
-                    <li key={entry.id}>
+      <div className="order-3 min-w-0 lg:col-start-2 lg:row-start-2">
+        <div className="divide-y divide-line rounded-lg border border-line bg-panel">
+          <div className="grid sm:grid-cols-[220px_minmax(0,1fr)] sm:divide-x sm:divide-line">
+            <Section label="Typeface">
+              <div className="grid grid-cols-2 gap-1.5">
+                {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
+                  <button
+                    key={id}
+                    onClick={() => update({ fontId: id })}
+                    aria-pressed={config.fontId === id}
+                    className={`rounded-md border px-3 py-2 font-mono text-[11px] transition ${
+                      config.fontId === id
+                        ? "border-accent/60 bg-accent/10 text-fg"
+                        : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
+                    }`}
+                  >
+                    {CANVAS_FONTS[id].label}
+                  </button>
+                ))}
+              </div>
+            </Section>
+
+            <Section label="Palette">
+              <div className="grid max-w-md grid-cols-3 gap-1.5">
+                {THEMES.map((theme) => (
+                  <button
+                    key={theme.id}
+                    onClick={() => update({ themeId: theme.id })}
+                    aria-pressed={config.themeId === theme.id}
+                    className={`flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-[11px] transition ${
+                      config.themeId === theme.id
+                        ? "border-accent/60 bg-accent/10 text-fg"
+                        : "border-line bg-raised text-muted hover:border-edge hover:text-fg"
+                    }`}
+                  >
+                    <span
+                      className="h-2.5 w-2.5 rounded-[2px] border border-edge"
+                      style={{ backgroundColor: theme.swatch }}
+                    />
+                    {theme.name}
+                  </button>
+                ))}
+              </div>
+            </Section>
+          </div>
+
+          <Section label="Templates">
+            <div className="flex flex-wrap gap-1.5">
+              {PRESETS.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  className="rounded-md border border-line bg-raised px-2.5 py-1.5 text-[11px] text-muted transition hover:border-edge hover:text-fg"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </Section>
+
+          <Section label="History">
+            {entries.length === 0 ? (
+              <p className="text-[11px] text-faint">
+                保存すると直近5件がここに残ります。
+              </p>
+            ) : (
+              <>
+                <button
+                  onClick={() => setHistoryOpen((open) => !open)}
+                  className="font-mono text-[11px] text-muted transition hover:text-fg"
+                >
+                  {historyOpen
+                    ? "▾ 閉じる"
+                    : `▸ 直近の${entries.length}件を表示`}
+                </button>
+                {historyOpen && (
+                  <ul className="mt-2 space-y-1">
+                    {entries.map((entry) => (
+                      <li key={entry.id}>
+                        <button
+                          onClick={() => restore(entry)}
+                          className="w-full truncate rounded-md border border-line bg-raised px-3 py-2 text-left text-[11px] text-muted transition hover:border-edge hover:text-fg"
+                          title={summarize(entry)}
+                        >
+                          {summarize(entry)}
+                        </button>
+                      </li>
+                    ))}
+                    <li>
                       <button
-                        onClick={() => restore(entry)}
-                        className="w-full truncate rounded-md border border-line bg-raised px-3 py-2 text-left text-[11px] text-muted transition hover:border-edge hover:text-fg"
-                        title={summarize(entry)}
+                        onClick={clear}
+                        className="text-[11px] text-danger/80 transition hover:text-danger"
                       >
-                        {summarize(entry)}
+                        履歴を削除
                       </button>
                     </li>
-                  ))}
-                  <li>
-                    <button
-                      onClick={clear}
-                      className="text-[11px] text-danger/80 transition hover:text-danger"
-                    >
-                      履歴を削除
-                    </button>
-                  </li>
-                </ul>
-              )}
-            </>
-          )}
-        </Section>
+                  </ul>
+                )}
+              </>
+            )}
+          </Section>
+        </div>
       </div>
     </div>
   );
@@ -579,10 +633,12 @@ function Toggle({
 }
 
 function Section({
+  index,
   label,
   hint,
   children,
 }: {
+  index?: string;
   label: string;
   hint?: string;
   children: React.ReactNode;
@@ -590,8 +646,19 @@ function Section({
   return (
     <section className="px-3.5 py-3.5">
       <div className="mb-2 flex items-center justify-between">
-        <h2 className="font-mono text-[10px] uppercase tracking-[0.18em] text-faint">{label}</h2>
-        {hint && <span className="font-mono text-[10px] text-faint">{hint}</span>}
+        <h2
+          className={
+            index
+              ? "flex items-center gap-1.5 text-[12px] text-muted"
+              : "font-mono text-[10px] uppercase tracking-[0.18em] text-faint"
+          }
+        >
+          {index && <span className="text-faint">{index}</span>}
+          {label}
+        </h2>
+        {hint && (
+          <span className="font-mono text-[10px] text-faint">{hint}</span>
+        )}
       </div>
       {children}
     </section>

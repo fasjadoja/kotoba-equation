@@ -339,7 +339,7 @@ const EVERYDAY_PRESETS: Preset[] = [
     category: "学び・すこやか",
     label: "上達",
     resultText: "上達",
-    subNote: "※やりっ本なしの練習は、くせを固めるだけ",
+    subNote: "※やりっぱなしの練習は、くせを固めるだけ",
     elements: [
       { op: "", text: "練習量" },
       { op: "×", text: "振り返り" },
@@ -365,6 +365,244 @@ const EVERYDAY_PRESETS: Preset[] = [
     elements: [
       { op: "", text: "楽しさ" },
       { op: "×", text: "手軽さ" },
+    ],
+  },
+  {
+    id: "bracket-shopping",
+    category: "定番",
+    label: "買い物の満足（かっこ）",
+    resultText: "買い物の満足",
+    subNote: "※（）の中を先に計算する。安さより、質と量の割り算",
+    elements: [
+      { op: "（", text: "質" },
+      { op: "×", text: "量" },
+      { op: "）", text: "" },
+      { op: "÷", text: "値段" },
+    ],
+  },
+  {
+    id: "bracket-average",
+    category: "定番",
+    label: "平均（かっこ）",
+    resultText: "3回の平均",
+    subNote: "※合計を先に出してから、回数で割る",
+    elements: [
+      { op: "（", text: "1回目" },
+      { op: "＋", text: "2回目" },
+      { op: "＋", text: "3回目" },
+      { op: "）", text: "" },
+      { op: "÷", text: "3" },
+    ],
+  },
+  {
+    id: "bracket-savings",
+    category: "仕事・お金",
+    label: "1年の貯金（かっこ）",
+    resultText: "1年の貯金",
+    subNote: "※毎月の差額が、そのまま12倍になる",
+    elements: [
+      { op: "（", text: "収入" },
+      { op: "−", text: "支出" },
+      { op: "）", text: "" },
+      { op: "×", text: "12か月" },
+    ],
+  },
+  {
+    id: "bracket-profit",
+    category: "仕事・お金",
+    label: "利益（かっこ）",
+    resultText: "ひと月の利益",
+    subNote: "※値上げも、原価を下げるのも、かっこの中の話",
+    elements: [
+      { op: "（", text: "売値" },
+      { op: "−", text: "原価" },
+      { op: "）", text: "" },
+      { op: "×", text: "売れた数" },
+    ],
+  },
+  {
+    id: "bracket-work",
+    category: "仕事・お金",
+    label: "続けられる仕事（かっこ）",
+    resultText: "続けられる仕事",
+    subNote: "※好きと得意がそろっても、求められなければ0になる",
+    elements: [
+      { op: "（", text: "好き" },
+      { op: "＋", text: "得意" },
+      { op: "）", text: "" },
+      { op: "×", text: "求められること" },
+    ],
+  },
+  {
+    id: "bracket-team",
+    category: "人との関係",
+    label: "チームの力（かっこ）",
+    resultText: "チームの力",
+    subNote: "※足し算の中身を上げてから、人数を掛ける",
+    elements: [
+      { op: "（", text: "一人の力" },
+      { op: "＋", text: "助け合い" },
+      { op: "）", text: "" },
+      { op: "×", text: "人数" },
+    ],
+  },
+  {
+    id: "bracket-meeting",
+    category: "仕事・お金",
+    label: "会議のコスト（かっこ）",
+    resultText: "会議のコスト",
+    subNote: "※人数が増えるほど、かっこの外の掛け算が重くなる",
+    elements: [
+      { op: "（", text: "時間" },
+      { op: "×", text: "人数" },
+      { op: "）", text: "" },
+      { op: "×", text: "時給" },
+    ],
+  },
+  {
+    id: "bracket-study",
+    category: "学び・すこやか",
+    label: "身につく量（かっこ）",
+    resultText: "身につく量",
+    subNote: "※机に向かった時間から、上の空だった時間を引く",
+    elements: [
+      { op: "（", text: "集中" },
+      { op: "×", text: "時間" },
+      { op: "）", text: "" },
+      { op: "−", text: "上の空の時間" },
+    ],
+  },
+  {
+    id: "bracket-margin",
+    category: "くらし・ごはん",
+    label: "心の余裕（かっこ）",
+    resultText: "心の余裕",
+    subNote: "※休みと眠りを足しても、予定を詰めれば残らない",
+    elements: [
+      { op: "（", text: "休み" },
+      { op: "＋", text: "眠り" },
+      { op: "）", text: "" },
+      { op: "−", text: "詰め込んだ予定" },
+    ],
+  },
+  {
+    id: "math-transpose",
+    category: "定番",
+    label: "自由時間（移項）",
+    resultText: "自由時間＋用事",
+    subNote: "※1日は動かせない。両辺から用事を引いた分が、自由時間",
+    elements: [{ op: "", text: "24時間" }],
+  },
+  {
+    id: "math-rate",
+    category: "仕事・お金",
+    label: "達成率（割合）",
+    resultText: "達成率（％）",
+    subNote: "※割合の式。分母を欲張ると、同じ努力でも数字は下がる",
+    elements: [
+      { op: "", text: "できた数" },
+      { op: "÷", text: "目標の数" },
+      { op: "×", text: "100" },
+    ],
+  },
+  {
+    id: "math-ratio",
+    category: "学び・すこやか",
+    label: "準備と本番（比）",
+    resultText: "準備：本番",
+    subNote: "※比の式。うまくいく人ほど、左側が長い",
+    elements: [
+      { op: "", text: "3" },
+      { op: "：", text: "1" },
+    ],
+  },
+  {
+    id: "math-square",
+    category: "人との関係",
+    label: "うわさの広がり（2乗）",
+    resultText: "うわさの広がり",
+    subNote: "※2乗の式。人が2倍になると、広がりは4倍になる",
+    elements: [
+      { op: "", text: "人数" },
+      { op: "×", text: "人数" },
+    ],
+  },
+  {
+    id: "math-inequality",
+    category: "仕事・お金",
+    label: "家計（不等号）",
+    resultText: "使うお金",
+    relation: "＜",
+    subNote: "※不等号の式。これが崩れた月が、赤字の月",
+    elements: [{ op: "", text: "入ってくるお金" }],
+  },
+  {
+    id: "math-linear",
+    category: "仕事・お金",
+    label: "貯金（一次関数）",
+    resultText: "半年後の貯金",
+    subNote: "※y＝ax＋b の形。傾き（毎月の額）が効いてくるのは後から",
+    elements: [
+      { op: "", text: "毎月の額" },
+      { op: "×", text: "月数" },
+      { op: "＋", text: "今ある額" },
+    ],
+  },
+  {
+    id: "math-speed",
+    category: "定番",
+    label: "進んだ距離（速さ）",
+    resultText: "進んだ距離",
+    subNote: "※速さ×時間。速くなくても、長く続ければ遠くまで行く",
+    elements: [
+      { op: "", text: "速さ" },
+      { op: "×", text: "時間" },
+    ],
+  },
+  {
+    id: "math-per",
+    category: "人との関係",
+    label: "一人あたり（単位量）",
+    resultText: "一人あたりの負担",
+    subNote: "※割り算の式。人を増やせない日は、上を減らすしかない",
+    elements: [
+      { op: "", text: "仕事の量" },
+      { op: "÷", text: "手のある人数" },
+    ],
+  },
+  {
+    id: "math-probability",
+    category: "学び・すこやか",
+    label: "当たる確率",
+    resultText: "当たる確率",
+    subNote: "※確率の式。分子を増やすには、まず数を打つ",
+    elements: [
+      { op: "", text: "当たりの数" },
+      { op: "÷", text: "全部の数" },
+    ],
+  },
+  {
+    id: "math-discount",
+    category: "くらし・ごはん",
+    label: "2割引（割合）",
+    resultText: "払う金額",
+    subNote: "※2割引は0.8倍。1割引を2回でも、0.81倍にしかならない",
+    elements: [
+      { op: "", text: "定価" },
+      { op: "×", text: "0.8" },
+    ],
+  },
+  {
+    id: "bracket-trip",
+    category: "くらし・ごはん",
+    label: "旅の時間（かっこ）",
+    resultText: "かかる時間",
+    subNote: "※行きと帰りを足してから、速さで割る",
+    elements: [
+      { op: "（", text: "行きの道のり" },
+      { op: "＋", text: "帰りの道のり" },
+      { op: "）", text: "" },
+      { op: "÷", text: "速さ" },
     ],
   },
 ];
@@ -501,12 +739,20 @@ export function dailyPresets(
   };
   const everyday = shuffled([...EVERYDAY_PRESETS, ...PRESET_THEMES]);
   const sayings = shuffled(QUOTE_PRESETS);
+  // How much of the batch is sayings is itself drawn from the seed, so some
+  // days open with mostly everyday equations and some with mostly quotes.
+  const quoteShare = 20 + (next() % 61);
   const picked: (Preset | PresetTheme)[] = [];
+  const labels = new Set<string>();
   while (picked.length < count && (everyday.length > 0 || sayings.length > 0)) {
-    const primary = picked.length % 2 === 0 ? everyday : sayings;
+    const primary = next() % 100 < quoteShare ? sayings : everyday;
     const fallback = primary === everyday ? sayings : everyday;
     const source = (primary.length > 0 ? primary : fallback).shift();
     if (!source) break;
+    // Two themes can share a label (「元気」), which reads as a mistake when
+    // both land in the same batch.
+    if (labels.has(source.label)) continue;
+    labels.add(source.label);
     picked.push(source);
   }
   return picked.map((source) =>

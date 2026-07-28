@@ -193,7 +193,7 @@ export async function publish(config: FormulaConfig): Promise<PublishResult> {
 
 export function galleryText(item: GalleryItem): string {
   const right = item.elements
-    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+    .map((element) => `${element.op}${element.text}`)
     .join("");
   return `${item.resultText}${item.relation}${right}`;
 }

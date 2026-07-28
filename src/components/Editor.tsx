@@ -573,7 +573,7 @@ export default function Editor() {
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
-            placeholder="例：伝えたい結論"
+            placeholder="例：A（伝えたい結論）"
             limit={LIMITS.resultText}
           />
         </Section>
@@ -697,7 +697,7 @@ export default function Editor() {
                   <input
                     type="text"
                     value={element.text}
-                    placeholder={`例：要素${index + 1}`}
+                    placeholder={`例：${String.fromCharCode(66 + (index % 25))}`}
                     aria-label={`要素 ${index + 1} のことば`}
                     maxLength={LIMITS.element}
                     onChange={(e) =>

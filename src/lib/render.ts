@@ -207,6 +207,14 @@ function contentLength(config: FormulaConfig): number {
   ).length;
 }
 
+/** Empty fields fall back to neutral letters so a half-filled formula still
+ *  reads as a formula without suggesting a topic. */
+const RESULT_PLACEHOLDER = "A";
+
+function elementPlaceholder(index: number) {
+  return String.fromCharCode("B".charCodeAt(0) + (index % 25));
+}
+
 /**
  * Brackets sit tight against the term they belong to, every other operator
  * keeps a full gap on both sides.
@@ -218,7 +226,10 @@ function elementParts(
 ): Part[] {
   const op = index === 0 ? element.op : element.op || "×";
   const text = element.text.trim();
-  if (!op) return [{ text: text || "———", color: colors.element, gap: 1 }];
+  if (!op)
+    return [
+      { text: text || elementPlaceholder(index), color: colors.element, gap: 1 },
+    ];
 
   const open = op === OPEN_BRACKET;
   const close = op === CLOSE_BRACKET;
@@ -229,7 +240,10 @@ function elementParts(
       gap: close ? 0 : 1,
     },
   ];
-  if (text) parts.push({ text, color: colors.element, gap: open ? 0 : 1 });
+  // A closing bracket stands on its own; every other operator needs a term
+  // after it, so an empty one borrows the placeholder letter.
+  const term = text || (close ? "" : elementPlaceholder(index));
+  if (term) parts.push({ text: term, color: colors.element, gap: open ? 0 : 1 });
   return parts;
 }
 
@@ -237,7 +251,7 @@ function inlineGroups(config: FormulaConfig): Part[][] {
   const theme = getTheme(config.themeId);
   const colors = { element: theme.element, operator: theme.operator };
   return [
-    [{ text: config.resultText || "成果", color: theme.title, gap: 1 }],
+    [{ text: config.resultText || RESULT_PLACEHOLDER, color: theme.title, gap: 1 }],
     ...config.elements.map((element, index) => {
       const parts = elementParts(element, index, colors);
       if (index > 0) return parts;
@@ -283,7 +297,7 @@ function buildBlocks(
   let broken = false;
 
   const relation = config.relation || "＝";
-  const result = config.resultText || "成果";
+  const result = config.resultText || RESULT_PLACEHOLDER;
   const elementGroups = (): Part[][] =>
     config.elements.map((element, index) =>
       elementParts(element, index, { element: theme.element, operator: theme.operator }),

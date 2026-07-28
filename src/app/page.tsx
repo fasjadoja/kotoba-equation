@@ -2,7 +2,7 @@ import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
 import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
-import { BoltIcon, FreeIcon, ShieldIcon } from "@/components/icons";
+import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
 import { SITE } from "@/lib/site";
 
 const POINTS = [
@@ -26,7 +26,7 @@ const POINTS = [
 const FAQ = [
   {
     q: "無料で使えますか？",
-    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の応援（500円）だけで運営しています。",
+    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の寄付（500円）だけで運営しています。",
   },
   {
     q: "作った画像は商用利用できますか？",
@@ -50,7 +50,7 @@ const FAQ = [
   },
   {
     q: "テンプレートは変わりますか？",
-    a: "「今日のテンプレート」は1日に1回入れ替わります。過去の分も含めて、「すべてのテンプレート」からいつでも選べます。",
+    a: "「今日のテンプレート」は10件ずつ表示され、1日に1回入れ替わります。候補は2,000通り以上あり、「別の10件」を押せばその場で別の候補を見られます。",
   },
   {
     q: "入力した内容はサーバーに送られますか？",
@@ -114,26 +114,34 @@ export default function Home() {
           </p>
         </div>
 
-        <ul className="mx-auto mb-6 grid max-w-3xl gap-2 sm:grid-cols-3">
-          {POINTS.map((point) => (
-            <li
-              key={point.title}
-              className="flex items-start gap-2.5 rounded-xl border border-line bg-panel/70 px-3 py-2.5 shadow-sm"
-            >
-              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                {point.icon}
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[12px] font-semibold text-fg">
-                  {point.title}
+        {/* Everyone who lands here wants the editor, so the pitch is folded away
+            and only opens for the people who ask for it. */}
+        <details className="mx-auto mb-6 max-w-3xl">
+          <summary className="mx-auto inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line bg-panel/70 px-3.5 py-1.5 text-[12px] font-medium text-muted shadow-sm transition hover:border-accent/50 hover:text-accent">
+            <InfoIcon size={13} />
+            このサイトについて
+          </summary>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-3">
+            {POINTS.map((point) => (
+              <li
+                key={point.title}
+                className="flex items-start gap-2.5 rounded-xl border border-line bg-panel/70 px-3 py-2.5 shadow-sm"
+              >
+                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                  {point.icon}
                 </span>
-                <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-                  {point.body}
+                <span className="min-w-0">
+                  <span className="block text-[12px] font-semibold text-fg">
+                    {point.title}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+                    {point.body}
+                  </span>
                 </span>
-              </span>
-            </li>
-          ))}
-        </ul>
+              </li>
+            ))}
+          </ul>
+        </details>
 
         <Editor />
 
@@ -155,9 +163,9 @@ export default function Home() {
           <Reveal className="mt-4" delay={80}>
           <section className="flex flex-col gap-5 rounded-2xl border border-line bg-panel p-6 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-8">
             <div>
-              <h2 className="text-[15px] font-semibold text-fg">このサイトを応援する</h2>
+              <h2 className="text-[15px] font-semibold text-fg">このサイトに寄付する</h2>
               <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-                広告も、ログインも、有料プランもありません。続けられるかどうかは、使ってくれた方の気持ち次第です（500円・1回限り）。
+                広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（500円・1回限り・見返りの商品はありません）。
               </p>
             </div>
             <a
@@ -167,7 +175,7 @@ export default function Home() {
               className={`${donateButtonClass} shrink-0 px-6 py-3.5 text-[14px]`}
             >
               <CoffeeIcon size={17} />
-              500円で応援する
+              500円を寄付する
             </a>
           </section>
           </Reveal>

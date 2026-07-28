@@ -38,7 +38,7 @@ export default function SiteHeader() {
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
             <CoffeeIcon />
-            応援する
+            寄付する
           </a>
         )}
       </div>

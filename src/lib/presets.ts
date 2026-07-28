@@ -1,3 +1,4 @@
+import { PRESET_THEMES, THEME_PICK, type PresetTheme } from "./presetThemes";
 import type { FormulaElement } from "./types";
 
 export type PresetCategory =
@@ -373,8 +374,8 @@ export const PRESET_CATEGORIES: PresetCategory[] = [
   "仕事・お金",
 ];
 
-/** How many presets 「今日のテンプレート」 shows. */
-export const DAILY_PRESET_COUNT = 6;
+/** How many presets 「今日のテンプレート」 shows at a time. */
+export const DAILY_PRESET_COUNT = 10;
 
 /** Local calendar day, used as the seed so the picks change once a day. */
 export function dayKey(now: Date) {
@@ -390,17 +391,80 @@ function hash(seed: string) {
   return value >>> 0;
 }
 
-/**
- * Deterministic shuffle: everyone opening the page on the same day sees the
- * same set, and it rotates at midnight without any server call.
- */
-export function dailyPresets(seed: string, count = DAILY_PRESET_COUNT): Preset[] {
-  const pool = [...PRESETS];
-  let state = hash(seed) || 1;
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    state = (Math.imul(state, 48271) % 2147483647) >>> 0;
-    const j = state % (i + 1);
-    [pool[i], pool[j]] = [pool[j], pool[i]];
+function binomial(n: number, k: number): number {
+  if (k < 0 || k > n) return 0;
+  let value = 1;
+  for (let i = 1; i <= k; i += 1) value = (value * (n - k + i)) / i;
+  return Math.round(value);
+}
+
+/** Maps an index to one combination, so a theme unfolds without storing rows. */
+function combination(n: number, k: number, index: number): number[] {
+  const picked: number[] = [];
+  let rest = index % Math.max(1, binomial(n, k));
+  let start = 0;
+  for (let slot = k; slot > 0; slot -= 1) {
+    for (let candidate = start; candidate <= n - slot; candidate += 1) {
+      const branch = binomial(n - candidate - 1, slot - 1);
+      if (rest < branch) {
+        picked.push(candidate);
+        start = candidate + 1;
+        break;
+      }
+      rest -= branch;
+    }
   }
-  return pool.slice(0, count);
+  return picked;
+}
+
+export function themeVariations(theme: PresetTheme) {
+  return binomial(theme.pool.length, THEME_PICK);
+}
+
+/** Every suggestion the stock can produce, hand-written ones included. */
+export const PRESET_VARIATIONS =
+  PRESETS.length + PRESET_THEMES.reduce((total, theme) => total + themeVariations(theme), 0);
+
+function presetFromTheme(theme: PresetTheme, index: number): Preset {
+  const words = combination(theme.pool.length, THEME_PICK, index).map(
+    (position) => theme.pool[position],
+  );
+  return {
+    id: `${theme.id}-${index}`,
+    category: theme.category,
+    label: theme.label,
+    resultText: theme.result,
+    subNote: theme.note,
+    elements: words.map((text, position) => ({
+      op: position === 0 ? "" : theme.op,
+      text,
+    })),
+  };
+}
+
+/**
+ * Deterministic pick: everyone opening the page on the same day sees the same
+ * set, and it rotates at midnight without any server call. `round` lets the
+ * reader ask for another batch without leaving the day's seed behind.
+ */
+export function dailyPresets(
+  seed: string,
+  count = DAILY_PRESET_COUNT,
+  round = 0,
+): Preset[] {
+  const sources: (Preset | PresetTheme)[] = [...PRESETS, ...PRESET_THEMES];
+  let state = hash(`${seed}#${round}`) || 1;
+  const next = () => {
+    state = (Math.imul(state, 48271) % 2147483647) >>> 0;
+    return state;
+  };
+  for (let i = sources.length - 1; i > 0; i -= 1) {
+    const j = next() % (i + 1);
+    [sources[i], sources[j]] = [sources[j], sources[i]];
+  }
+  return sources
+    .slice(0, count)
+    .map((source) =>
+      "pool" in source ? presetFromTheme(source, next() % themeVariations(source)) : source,
+    );
 }

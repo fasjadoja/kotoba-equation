@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DAILY_PRESET_COUNT,
-  PRESETS,
-  PRESET_CATEGORIES,
+  PRESET_VARIATIONS,
   dailyPresets,
   dayKey,
   type Preset,
@@ -46,6 +45,7 @@ import {
   EqualsIcon,
   FrameIcon,
   HashIcon,
+  InfoIcon,
   LayoutIcon,
   NoteIcon,
   PaletteIcon,
@@ -138,6 +138,7 @@ export default function Editor() {
   const [keepHistory, setKeepHistory] = useState(true);
   const [showSizes, setShowSizes] = useState(false);
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
+  const [presetRound, setPresetRound] = useState(0);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -159,8 +160,8 @@ export default function Editor() {
   // Seeded on the browser's calendar day, so the set rotates at local midnight
   // without making the server and the client render different markup.
   useEffect(() => {
-    setTodaysPresets(dailyPresets(dayKey(new Date())));
-  }, []);
+    setTodaysPresets(dailyPresets(dayKey(new Date()), DAILY_PRESET_COUNT, presetRound));
+  }, [presetRound]);
 
   useEffect(() => {
     setCanCopy(
@@ -317,7 +318,11 @@ export default function Editor() {
    *  the public gallery is explicitly ticked. */
   const commit = () => {
     if (keepHistory) save(config);
-    if (makePublic) void gallery.share(config);
+    if (makePublic) {
+      void gallery.share(config).then((result) => {
+        if (!result.ok && result.reason) notify(result.reason, "error");
+      });
+    }
   };
 
   const downloadImage = async () => {
@@ -488,9 +493,9 @@ export default function Editor() {
               />
             )}
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-faint">
+          <Hint>
             「A ＝ B × C」のような等式も、「A ＞ B」のような比較も。「その他」を選ぶと好きな記号を1文字入力できます。
-          </p>
+          </Hint>
         </Section>
 
         <Section
@@ -581,18 +586,18 @@ export default function Editor() {
           <button
             onClick={addElement}
             disabled={config.elements.length >= MAX_ELEMENTS}
-            className="mt-1.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-edge py-2 text-[12px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:text-faint/60"
+            className="mt-1.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-control py-2 text-[12px] font-medium text-muted transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:text-faint/60"
           >
             <PlusIcon size={14} />
             {config.elements.length >= MAX_ELEMENTS
               ? `要素は${MAX_ELEMENTS}つまで`
               : "要素を追加"}
           </button>
-          <p className="mt-2 text-[11px] leading-snug text-faint">
+          <Hint>
             左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
             <br />
             括弧の例：200 ＝（3 ＋ 7）× 20　※「）」だけの行はことばを空に。
-          </p>
+          </Hint>
         </Section>
 
         <Section
@@ -620,9 +625,9 @@ export default function Editor() {
             placeholder="例：#ことばの方程式 #タグ"
             limit={LIMITS.hashtags}
           />
-          <p className="mt-1 text-[11px] leading-snug text-faint">
+          <Hint>
             スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
-          </p>
+          </Hint>
         </Section>
 
         <Section
@@ -682,42 +687,44 @@ export default function Editor() {
               </p>
             )}
           </div>
-          <p className="mt-1.5 text-[11px] leading-snug text-faint">
+          <Hint>
             履歴は保存・シェアしたときに、直近{HISTORY_LIMIT}件までこのブラウザに残ります（テンプレとして再利用できます）。
             {gallery.enabled
-              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。"
+              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。リンクや連絡先を含む式は公開されません。"
               : ""}
-          </p>
+          </Hint>
         </Section>
 
         <div className="space-y-2 p-3.5">
+          {/* Copying straight into a post is the most common finish, so it leads;
+              X only opens a compose window, so it sits last. */}
+          {canCopy && (
+            <button
+              onClick={() => void handleCopy()}
+              className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
+            >
+              <CopyIcon size={15} />
+              画像をコピー
+            </button>
+          )}
+          <button
+            onClick={() => void handleDownload()}
+            className={
+              canCopy
+                ? `${secondaryButtonClass} w-full`
+                : `${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`
+            }
+          >
+            <SaveIcon size={15} />
+            PNGで保存
+          </button>
           <button
             onClick={() => void handleShare()}
-            className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
+            className={`${quietButtonClass} w-full`}
           >
-            <XIcon size={15} />
+            <XIcon size={14} />
             画像を保存して X でシェア
           </button>
-          <div
-            className={`grid gap-2 ${canCopy ? "grid-cols-2" : "grid-cols-1"}`}
-          >
-            <button
-              onClick={() => void handleDownload()}
-              className={secondaryButtonClass}
-            >
-              <SaveIcon size={15} />
-              PNGで保存
-            </button>
-            {canCopy && (
-              <button
-                onClick={() => void handleCopy()}
-                className={secondaryButtonClass}
-              >
-                <CopyIcon size={15} />
-                画像をコピー
-              </button>
-            )}
-          </div>
           <div aria-live="polite" className="min-h-[28px]">
             {status && (
               <p
@@ -780,7 +787,7 @@ export default function Editor() {
               <button
                 onClick={() => setShowSizes((previous) => !previous)}
                 aria-expanded={showSizes}
-                className="rounded-md border border-edge px-2.5 py-1 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
+                className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
               >
                 サイズを変える
               </button>
@@ -795,11 +802,7 @@ export default function Editor() {
                     onClick={() => update({ sizeId: item.id })}
                     aria-pressed={config.sizeId === item.id}
                     title={item.hint}
-                    className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition ${
-                      config.sizeId === item.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.sizeId === item.id)} py-1.5`}
                   >
                     {item.label}
                     {item.id === RECOMMENDED_SIZE && (
@@ -822,13 +825,23 @@ export default function Editor() {
           </div>
           {/* The preview stays pinned while scrolling, so saving is always one
               tap away on a phone. */}
-          <div className="flex items-center justify-between gap-2 border-t border-line px-3 py-2 lg:hidden">
-            <p className="min-w-0 text-[11px] leading-snug text-faint">
-              入力するとここにすぐ反映されます
-            </p>
+          <div className="flex items-center gap-2 border-t border-line px-3 py-2 lg:hidden">
+            {canCopy && (
+              <button
+                onClick={() => void handleCopy()}
+                className={`${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`}
+              >
+                <CopyIcon size={14} />
+                画像をコピー
+              </button>
+            )}
             <button
               onClick={() => void handleDownload()}
-              className={`${primaryButtonClass} shrink-0 px-3 py-2 text-[12px]`}
+              className={
+                canCopy
+                  ? `${secondaryButtonClass} shrink-0 px-3 py-2 text-[12px]`
+                  : `${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`
+              }
             >
               <SaveIcon size={14} />
               PNGで保存
@@ -847,11 +860,7 @@ export default function Editor() {
                     key={id}
                     onClick={() => update({ fontId: id })}
                     aria-pressed={config.fontId === id}
-                    className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition ${
-                      config.fontId === id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={choiceClass(config.fontId === id)}
                   >
                     {CANVAS_FONTS[id].label}
                   </button>
@@ -867,19 +876,13 @@ export default function Editor() {
                     onClick={() => update({ layoutId: layout.id })}
                     aria-pressed={config.layoutId === layout.id}
                     title={layout.hint}
-                    className={`rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
-                      config.layoutId === layout.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.layoutId === layout.id)} px-2`}
                   >
                     {layout.label}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] leading-snug text-faint">
-                自動はできる限り横1行。入り切らない式だけ上下に分けます。
-              </p>
+              <Hint>自動はできる限り横1行。入り切らない式だけ上下に分けます。</Hint>
             </Section>
 
             <Section icon={<PaletteIcon size={14} />} label="配色">
@@ -889,11 +892,7 @@ export default function Editor() {
                     key={theme.id}
                     onClick={() => update({ themeId: theme.id })}
                     aria-pressed={config.themeId === theme.id}
-                    className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
-                      config.themeId === theme.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.themeId === theme.id)} flex items-center justify-center gap-2 px-2`}
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full border border-edge"
@@ -930,9 +929,9 @@ export default function Editor() {
               />
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-[11px] leading-snug text-faint">
+              <Hint>
                 文字数が多い式は自動で縮小されます。もう少し大きく／余白を狭くしたいときだけ動かしてください（はみ出す手前で自動的に止まります）。
-              </p>
+              </Hint>
               <button
                 onClick={() => update({ textScale: 1, marginScale: 1 })}
                 disabled={config.textScale === 1 && config.marginScale === 1}
@@ -944,56 +943,42 @@ export default function Editor() {
           </Section>
 
           <Section
+            tone="info"
             icon={<CalendarIcon size={14} />}
             label="今日のテンプレート"
             hint={`${DAILY_PRESET_COUNT}件`}
           >
-            <p className="mb-1.5 text-[11px] text-faint">
-              1日に1回入れ替わります。クリックすると入力欄に読み込みます。
-            </p>
             <div className="flex flex-wrap gap-1.5">
               {todaysPresets.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
-                  title={preset.subNote}
+                  title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
+                    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+                    .join("")}`}
                   className={chipClass}
                 >
                   {preset.label}
                 </button>
               ))}
             </div>
-            <details className="mt-3 group">
-              <summary className="cursor-pointer list-none text-[11px] font-medium text-muted transition hover:text-accent">
-                すべてのテンプレート（{PRESETS.length}件）を見る
-              </summary>
-              <div className="mt-2.5 space-y-3">
-                {PRESET_CATEGORIES.map((category) => (
-                  <div key={category}>
-                    <p className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-faint">
-                      {category}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PRESETS.filter((preset) => preset.category === category).map(
-                        (preset) => (
-                          <button
-                            key={preset.id}
-                            onClick={() => applyPreset(preset)}
-                            title={preset.subNote}
-                            className={chipClass}
-                          >
-                            {preset.label}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <Hint label="テンプレートについて">
+                1日に1回入れ替わります。クリックすると入力欄に読み込みます。候補は全部で約
+                {PRESET_VARIATIONS.toLocaleString("ja-JP")}通りあり、「別の10件」で順に見られます。
+              </Hint>
+              <button
+                onClick={() => setPresetRound((round) => round + 1)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
+              >
+                <RefreshIcon size={13} />
+                別の10件
+              </button>
+            </div>
           </Section>
 
           <Section
+            tone="info"
             icon={<ClockIcon size={14} />}
             label="直近の履歴"
             hint={entries.length > 0 ? `${entries.length} / ${HISTORY_LIMIT}` : undefined}
@@ -1031,6 +1016,7 @@ export default function Editor() {
 
           {gallery.enabled && (
             <Section
+              tone="info"
               icon={<UsersIcon size={14} />}
               label={`みんなの作品（最新${GALLERY_LIMIT}件・リアルタイム）`}
               hint={gallery.items.length > 0 ? `${gallery.items.length}` : undefined}
@@ -1072,19 +1058,46 @@ export default function Editor() {
 }
 
 // text-base on mobile keeps iOS Safari from zooming in when a field is focused.
+// A 1.5px control border plus the inset shadow is what separates a field from
+// the white card behind it.
 const fieldClass =
-  "h-10 rounded-lg border border-edge bg-raised px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/40 focus:border-accent focus:bg-panel focus:shadow-none focus:ring-2 focus:ring-accent/15 sm:text-[13px]";
+  "h-10 rounded-lg border-[1.5px] border-control bg-white px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/70 focus:border-accent focus:shadow-none focus:ring-[3px] focus:ring-accent/20 sm:text-[13px]";
 
 const chipClass =
-  "rounded-md border border-edge bg-panel px-2.5 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:text-accent";
+  "rounded-md border-[1.5px] border-control bg-panel px-2.5 py-1.5 text-[12px] font-medium text-fg transition hover:border-accent hover:text-accent";
 
 /** Square, glyph-first button used for the relation symbols. */
 function symbolChipClass(active: boolean) {
-  return `flex h-10 w-10 items-center justify-center rounded-lg border text-[15px] font-medium transition ${
+  return `flex h-10 w-10 items-center justify-center rounded-lg border-[1.5px] text-[15px] font-medium transition ${
     active
-      ? "border-accent bg-accent/5 text-accent"
-      : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
+      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
+      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
   }`;
+}
+
+/** Same treatment for every 「選ぶ」 button (font, layout, theme, size). */
+function choiceClass(active: boolean) {
+  return `rounded-lg border-[1.5px] px-3 py-2 text-[12px] font-medium transition ${
+    active
+      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
+      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
+  }`;
+}
+
+/**
+ * Secondary copy lives behind a disclosure: the people who need it can open it,
+ * everyone else keeps a shorter form.
+ */
+function Hint({ children, label = "詳しい説明" }: { children: React.ReactNode; label?: string }) {
+  return (
+    <details className="mt-2">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[11px] font-medium text-muted transition hover:text-accent">
+        <InfoIcon size={12} />
+        {label}
+      </summary>
+      <div className="mt-1.5 text-[11px] leading-snug text-faint">{children}</div>
+    </details>
+  );
 }
 
 function ChevronIcon() {
@@ -1134,7 +1147,7 @@ function Slider({
         step={range.step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1.5 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
+        className="mt-1.5 h-2 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
       />
     </label>
   );
@@ -1142,10 +1155,13 @@ function Slider({
 
 /** One filled button leads; the rest stay quiet so the main action is obvious. */
 const primaryButtonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark active:translate-y-px";
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
 
 const secondaryButtonClass =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border border-edge bg-panel px-4 py-3 text-[13px] font-medium text-muted transition hover:border-accent/50 hover:text-accent active:translate-y-px";
+  "inline-flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-control bg-panel px-4 py-3 text-[13px] font-semibold text-fg transition hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
+
+const quietButtonClass =
+  "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-[12px] font-medium text-muted transition hover:bg-raised hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 function Field({
   value,
@@ -1204,23 +1220,29 @@ function Toggle({
   label: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-[11px] text-muted">
+    <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] text-fg transition hover:border-accent/70">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-3.5 w-3.5 accent-accent"
+        className="h-4 w-4 shrink-0 accent-accent"
       />
       {label}
     </label>
   );
 }
 
+/**
+ * Icon colours follow one rule: blue for anything you fill in or choose, grey
+ * for read-only lists. Gold is reserved for donations and red for destructive
+ * actions, so the palette never grows past four meanings.
+ */
 function Section({
   index,
   icon,
   label,
   hint,
+  tone = "input",
   children,
 }: {
   index?: string;
@@ -1228,6 +1250,7 @@ function Section({
   icon?: React.ReactNode;
   label: string;
   hint?: string;
+  tone?: "input" | "info";
   children: React.ReactNode;
 }) {
   return (
@@ -1241,7 +1264,11 @@ function Section({
           }`}
         >
           {icon && (
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-accent/10 text-accent">
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+                tone === "input" ? "bg-accent/10 text-accent" : "bg-raised text-faint"
+              }`}
+            >
               {icon}
             </span>
           )}

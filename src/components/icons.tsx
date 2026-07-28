@@ -236,6 +236,15 @@ export function ShieldIcon(props: IconProps) {
   );
 }
 
+export function InfoIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="12" r="8.4" />
+      <path d="M12 11v5M12 8.1v.1" />
+    </Svg>
+  );
+}
+
 export function BoltIcon(props: IconProps) {
   return (
     <Svg {...props}>

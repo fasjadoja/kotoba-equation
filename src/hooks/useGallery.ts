@@ -8,6 +8,7 @@ import {
   publish,
   subscribeToInserts,
   type GalleryItem,
+  type PublishResult,
 } from "@/lib/gallery";
 import type { FormulaConfig } from "@/lib/types";
 
@@ -37,8 +38,8 @@ export function useGallery() {
     };
   }, []);
 
-  const share = useCallback(async (config: FormulaConfig) => {
-    if (!galleryEnabled) return false;
+  const share = useCallback(async (config: FormulaConfig): Promise<PublishResult> => {
+    if (!galleryEnabled) return { ok: false };
     return publish(config);
   }, []);
 

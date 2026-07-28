@@ -74,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 rel="noopener noreferrer"
                 className="transition hover:text-fg"
               >
-                このサイトを応援する
+                寄付する（500円）
               </a>
             )}
             <span className="ml-auto">

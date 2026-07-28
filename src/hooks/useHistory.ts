@@ -4,8 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormulaConfig } from "@/lib/types";
 
 const STORAGE_KEY = "formula-studio.history";
-/** Recent formulas double as personal templates, so a few more are useful. */
-export const HISTORY_LIMIT = 8;
+/**
+ * Recent formulas double as personal templates and as search material, so the
+ * browser keeps a longer tail than it shows. Oldest entries drop off first.
+ */
+export const HISTORY_LIMIT = 60;
+/** How many chips the 「直近の履歴」 section lists without a search. */
+export const HISTORY_VISIBLE = 8;
 
 export type HistoryEntry = {
   id: string;

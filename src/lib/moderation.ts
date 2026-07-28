@@ -11,6 +11,10 @@ const ABUSIVE = ["死ね", "殺す", "殺害", "自殺しろ", "消えろ", "ブ
 
 export type PublishCheck = { ok: true } | { ok: false; reason: string };
 
+export function hasAbusiveWord(text: string): boolean {
+  return ABUSIVE.some((word) => text.includes(word));
+}
+
 /** Fields that may legitimately contain an @handle are checked without EMAIL. */
 export function checkPublicText(parts: {
   body: string[];
@@ -27,7 +31,7 @@ export function checkPublicText(parts: {
       reason: "連絡先を含む式は公開できません（保存はできます）",
     };
   }
-  if (ABUSIVE.some((word) => all.includes(word))) {
+  if (hasAbusiveWord(all)) {
     return { ok: false, reason: "だれかを傷つける言葉は公開できません（保存はできます）" };
   }
   return { ok: true };

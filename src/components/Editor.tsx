@@ -52,6 +52,7 @@ import {
   PlusIcon,
   RefreshIcon,
   SaveIcon,
+  SearchIcon,
   SlidersIcon,
   TargetIcon,
   TrashIcon,
@@ -60,7 +61,13 @@ import {
   UsersIcon,
   XIcon,
 } from "./icons";
-import { HISTORY_LIMIT, useHistory, type HistoryEntry } from "@/hooks/useHistory";
+import {
+  HISTORY_LIMIT,
+  HISTORY_VISIBLE,
+  useHistory,
+  type HistoryEntry,
+} from "@/hooks/useHistory";
+import { isSearchable, searchAll, type SearchHit } from "@/lib/search";
 import { useDraft } from "@/hooks/useDraft";
 import { useSupporter } from "@/hooks/useSupporter";
 import { useGallery } from "@/hooks/useGallery";
@@ -80,6 +87,9 @@ const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
 };
 
 const CUSTOM_OP = "__custom__";
+
+/** Enough results to choose from without turning the panel into a page. */
+const SEARCH_LIMIT = 12;
 
 type Status = { text: string; tone: "ok" | "error" };
 
@@ -139,6 +149,7 @@ export default function Editor() {
   const [showSizes, setShowSizes] = useState(false);
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
   const [presetRound, setPresetRound] = useState(0);
+  const [query, setQuery] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -153,6 +164,9 @@ export default function Editor() {
   }, []);
 
   const { remember, forget } = useDraft(adoptConfig);
+
+  const hits = useMemo(() => searchAll(entries, query, SEARCH_LIMIT), [entries, query]);
+  const searchableCount = useMemo(() => entries.filter(isSearchable).length, [entries]);
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
@@ -267,6 +281,15 @@ export default function Editor() {
     );
     setCustomRelation(!isPresetRelation(entry.relation || "＝"));
     notify("履歴から読み込みました");
+  };
+
+  const applyHit = (hit: SearchHit) => {
+    if (hit.kind === "history") {
+      restore(hit.entry);
+      return;
+    }
+    applyPreset(hit.preset);
+    notify("テンプレートを読み込みました");
   };
 
   const updateElement = (
@@ -945,6 +968,65 @@ export default function Editor() {
           </Section>
 
           <Section
+            icon={<SearchIcon size={14} />}
+            label="式をさがす（テンプレート・履歴）"
+            hint={query ? `${hits.length}件` : undefined}
+          >
+            <div className="relative">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="例：睡眠 / しあわせ / 会議"
+                className={`${fieldClass} w-full pl-9`}
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
+                <SearchIcon size={14} />
+              </span>
+            </div>
+            {!query.trim() && (
+              <p className="mt-2 text-[11px] text-faint">
+                テンプレート約{PRESET_VARIATIONS.toLocaleString("ja-JP")}通りと、この端末の履歴
+                {searchableCount}件から探せます。
+              </p>
+            )}
+            {query.trim() &&
+              (hits.length === 0 ? (
+                <p className="mt-2 text-[11px] text-faint">
+                  一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {hits.map((hit) => (
+                    <li key={`${hit.kind}-${hit.id}`}>
+                      <button
+                        onClick={() => applyHit(hit)}
+                        title={hit.text}
+                        className="flex w-full items-center gap-2 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
+                      >
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                            hit.kind === "history"
+                              ? "bg-accent/10 text-accent"
+                              : "bg-panel text-faint"
+                          }`}
+                        >
+                          {hit.kind === "history" ? "履歴" : "テンプレ"}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
+                          {hit.text}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            <Hint label="検索について">
+              テンプレートとこの端末の履歴をまとめて探します。ひらがな・カタカナ・漢字の違いや、1文字くらいの打ち間違いは自動で吸収します（スペース区切りで複数のことばを指定すると、両方を含む式だけが残ります）。書きかけの式や、ことばになっていない履歴は結果に出ません。
+            </Hint>
+          </Section>
+
+          <Section
             tone="info"
             icon={<CalendarIcon size={14} />}
             label="今日のテンプレート"
@@ -987,15 +1069,17 @@ export default function Editor() {
           >
             {entries.length === 0 ? (
               <p className="text-[11px] text-faint">
-                画像を保存すると、直近{HISTORY_LIMIT}件がここに残ります（テンプレとして使えます）。
+                画像を保存すると、この端末に最大{HISTORY_LIMIT}件が残ります（テンプレとして使えます）。
               </p>
             ) : (
               <>
                 <p className="mb-1.5 text-[11px] text-faint">
                   クリックすると、その式をテンプレとして読み込みます。
+                  {entries.length > HISTORY_VISIBLE &&
+                    `新しい${HISTORY_VISIBLE}件だけを表示しています（残りは上の検索から）。`}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {entries.map((entry) => (
+                  {entries.slice(0, HISTORY_VISIBLE).map((entry) => (
                     <button
                       key={entry.id}
                       onClick={() => restore(entry)}

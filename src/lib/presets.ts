@@ -443,6 +443,28 @@ function presetFromTheme(theme: PresetTheme, index: number): Preset {
 }
 
 /**
+ * Builds a suggestion around chosen pool words, filling the remaining slots in
+ * pool order. Search uses it so the words that matched appear in the equation.
+ */
+export function presetFromWords(theme: PresetTheme, picked: number[]): Preset {
+  const order = [
+    ...picked,
+    ...theme.pool.map((_, index) => index).filter((index) => !picked.includes(index)),
+  ].slice(0, THEME_PICK);
+  return {
+    id: `${theme.id}-w${order.join("-")}`,
+    category: theme.category,
+    label: theme.label,
+    resultText: theme.result,
+    subNote: theme.note,
+    elements: order.map((position, slot) => ({
+      op: slot === 0 ? "" : theme.op,
+      text: theme.pool[position],
+    })),
+  };
+}
+
+/**
  * Deterministic pick: everyone opening the page on the same day sees the same
  * set, and it rotates at midnight without any server call. `round` lets the
  * reader ask for another batch without leaving the day's seed behind.

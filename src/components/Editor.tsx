@@ -3,8 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DAILY_PRESET_COUNT,
-  PRESETS,
-  PRESET_CATEGORIES,
+  PRESET_VARIATIONS,
   dailyPresets,
   dayKey,
   type Preset,
@@ -35,8 +34,40 @@ import {
   type FormulaConfig,
   type Operator,
 } from "@/lib/types";
-import { SHARE_HASHTAGS } from "@/lib/site";
-import { HISTORY_LIMIT, useHistory, type HistoryEntry } from "@/hooks/useHistory";
+import { SHARE_HASHTAGS, SITE } from "@/lib/site";
+import {
+  AlertIcon,
+  BlocksIcon,
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  CopyIcon,
+  EqualsIcon,
+  FrameIcon,
+  HashIcon,
+  InfoIcon,
+  LayoutIcon,
+  NoteIcon,
+  PaletteIcon,
+  PlusIcon,
+  RefreshIcon,
+  SaveIcon,
+  SearchIcon,
+  SlidersIcon,
+  TargetIcon,
+  TrashIcon,
+  TypeIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "./icons";
+import {
+  HISTORY_LIMIT,
+  HISTORY_VISIBLE,
+  useHistory,
+  type HistoryEntry,
+} from "@/hooks/useHistory";
+import { isSearchable, searchAll, type SearchHit } from "@/lib/search";
 import { useDraft } from "@/hooks/useDraft";
 import { useSupporter } from "@/hooks/useSupporter";
 import { useGallery } from "@/hooks/useGallery";
@@ -56,6 +87,11 @@ const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
 };
 
 const CUSTOM_OP = "__custom__";
+
+/** Enough results to choose from without turning the panel into a page. */
+const SEARCH_LIMIT = 12;
+
+type Status = { text: string; tone: "ok" | "error" };
 
 /**
  * Japanese webfonts are served in many unicode-range slices, and the browser
@@ -103,7 +139,7 @@ function isPresetRelation(relation: string) {
 
 export default function Editor() {
   const [config, setConfig] = useState<FormulaConfig>(DEFAULT_CONFIG);
-  const [status, setStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<Status | null>(null);
   const [canCopy, setCanCopy] = useState(false);
   const [customOps, setCustomOps] = useState<boolean[]>([]);
   const [customRelation, setCustomRelation] = useState(false);
@@ -112,6 +148,8 @@ export default function Editor() {
   const [keepHistory, setKeepHistory] = useState(true);
   const [showSizes, setShowSizes] = useState(false);
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
+  const [presetRound, setPresetRound] = useState(0);
+  const [query, setQuery] = useState("");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -127,14 +165,17 @@ export default function Editor() {
 
   const { remember, forget } = useDraft(adoptConfig);
 
+  const hits = useMemo(() => searchAll(entries, query, SEARCH_LIMIT), [entries, query]);
+  const searchableCount = useMemo(() => entries.filter(isSearchable).length, [entries]);
+
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
 
   // Seeded on the browser's calendar day, so the set rotates at local midnight
   // without making the server and the client render different markup.
   useEffect(() => {
-    setTodaysPresets(dailyPresets(dayKey(new Date())));
-  }, []);
+    setTodaysPresets(dailyPresets(dayKey(new Date()), DAILY_PRESET_COUNT, presetRound));
+  }, [presetRound]);
 
   useEffect(() => {
     setCanCopy(
@@ -180,6 +221,9 @@ export default function Editor() {
     setConfig((previous) => ({ ...previous, ...patch }));
   }, []);
 
+  const notify = (text: string, tone: Status["tone"] = "ok") =>
+    setStatus({ text, tone });
+
   useEffect(() => remember(config), [config, remember]);
 
   // The gold lockup is only offered while the supporter window is open.
@@ -193,7 +237,7 @@ export default function Editor() {
       elements: DEFAULT_CONFIG.elements.map((element) => ({ ...element })),
     });
     forget();
-    setStatus("入力を初期状態に戻しました");
+    notify("入力を初期状態に戻しました");
   };
 
   const applyPreset = (preset: Preset) => {
@@ -218,7 +262,7 @@ export default function Editor() {
       item.elements.map((element) => !!element.op && !isPresetOperator(element.op)),
     );
     setCustomRelation(!isPresetRelation(item.relation || "＝"));
-    setStatus("みんなの作品をテンプレとして読み込みました");
+    notify("みんなの作品をテンプレとして読み込みました");
   };
 
   const restore = (entry: HistoryEntry) => {
@@ -236,7 +280,16 @@ export default function Editor() {
       ),
     );
     setCustomRelation(!isPresetRelation(entry.relation || "＝"));
-    setStatus("履歴から読み込みました");
+    notify("履歴から読み込みました");
+  };
+
+  const applyHit = (hit: SearchHit) => {
+    if (hit.kind === "history") {
+      restore(hit.entry);
+      return;
+    }
+    applyPreset(hit.preset);
+    notify("テンプレートを読み込みました");
   };
 
   const updateElement = (
@@ -276,14 +329,23 @@ export default function Editor() {
       if (elements.length > 0) elements[0] = { ...elements[0], op: "" };
       return { ...previous, elements };
     });
-    setCustomOps((previous) => previous.filter((_, i) => i !== index));
+    // The first row loses its operator above, so its "その他…" flag goes with it.
+    setCustomOps((previous) => {
+      const next = previous.filter((_, i) => i !== index);
+      if (next.length > 0) next[0] = false;
+      return next;
+    });
   };
 
   /** Both destinations are the user's choice; nothing leaves the browser unless
    *  the public gallery is explicitly ticked. */
   const commit = () => {
     if (keepHistory) save(config);
-    if (makePublic) void gallery.share(config);
+    if (makePublic) {
+      void gallery.share(config).then((result) => {
+        if (!result.ok && result.reason) notify(result.reason, "error");
+      });
+    }
   };
 
   const downloadImage = async () => {
@@ -317,7 +379,8 @@ export default function Editor() {
 
   const handleDownload = async () => {
     const ok = await downloadImage();
-    setStatus(ok ? "画像を保存しました" : "画像を生成できませんでした");
+    if (ok) notify("画像を保存しました");
+    else notify("画像を生成できませんでした", "error");
   };
 
   const shareTags = () => {
@@ -334,18 +397,23 @@ export default function Editor() {
     }`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       text,
-    )}&hashtags=${encodeURIComponent(shareTags().join(","))}`;
+    )}&hashtags=${encodeURIComponent(shareTags().join(","))}&url=${encodeURIComponent(
+      SITE.url,
+    )}`;
     const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
     const ok = await downloadImage();
+    if (!ok) {
+      notify("画像を生成できませんでした", "error");
+      return;
+    }
     if (!shareWindow) {
-      setStatus(
+      notify(
         "ポップアップがブロックされました。保存した画像を手動で投稿してください",
+        "error",
       );
       return;
     }
-    setStatus(
-      ok ? "画像を保存しました。Xの投稿画面に貼り付けてください" : null,
-    );
+    notify("画像を保存しました。Xの投稿画面に貼り付けてください");
   };
 
   const handleCopy = async () => {
@@ -359,9 +427,9 @@ export default function Editor() {
       });
       await navigator.clipboard.write([item]);
       commit();
-      setStatus("画像をコピーしました");
+      notify("画像をコピーしました");
     } catch {
-      setStatus("このブラウザではコピーできません。保存をご利用ください");
+      notify("このブラウザではコピーできません。保存をご利用ください", "error");
     }
   };
 
@@ -393,7 +461,7 @@ export default function Editor() {
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
       <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
-        <Section index="①" label="結果（左側）">
+        <Section index="①" icon={<TargetIcon size={14} />} label="結果（左側）">
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
@@ -402,7 +470,11 @@ export default function Editor() {
           />
         </Section>
 
-        <Section index="②" label="関係（左と右をつなぐ記号）">
+        <Section
+          index="②"
+          icon={<EqualsIcon size={14} />}
+          label="関係（左と右をつなぐ記号）"
+        >
           <div className="flex flex-wrap items-center gap-1.5">
             {RELATIONS.map((relation) => (
               <button
@@ -446,13 +518,14 @@ export default function Editor() {
               />
             )}
           </div>
-          <p className="mt-2 text-[11px] leading-snug text-faint">
+          <Hint>
             「A ＝ B × C」のような等式も、「A ＞ B」のような比較も。「その他」を選ぶと好きな記号を1文字入力できます。
-          </p>
+          </Hint>
         </Section>
 
         <Section
           index="③"
+          icon={<BlocksIcon size={14} />}
           label="右側の要素"
           hint={`${config.elements.length} / ${MAX_ELEMENTS}`}
         >
@@ -515,6 +588,7 @@ export default function Editor() {
                     type="text"
                     value={element.text}
                     placeholder={`例：要素${index + 1}`}
+                    aria-label={`要素 ${index + 1} のことば`}
                     maxLength={LIMITS.element}
                     onChange={(e) =>
                       updateElement(index, { text: e.target.value })
@@ -528,28 +602,34 @@ export default function Editor() {
                     title="この要素を削除"
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-faint transition hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:text-faint/35 disabled:hover:bg-transparent disabled:hover:text-faint/35"
                   >
-                    <TrashIcon />
+                    <TrashIcon size={15} />
                   </button>
                 </div>
               );
             })}
           </div>
-          {config.elements.length < MAX_ELEMENTS && (
-            <button
-              onClick={addElement}
-              className="mt-1.5 w-full rounded-lg border border-edge py-2 text-[12px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
-            >
-              ＋ 要素を追加
-            </button>
-          )}
-          <p className="mt-2 text-[11px] leading-snug text-faint">
-            左のプルダウンが、その要素の前に入る記号です（計算 / 比較 / 括弧 でまとまっています）。一覧にない記号は「その他…」を選ぶと1文字だけ入力できます。
+          <button
+            onClick={addElement}
+            disabled={config.elements.length >= MAX_ELEMENTS}
+            className="mt-1.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-control py-2 text-[12px] font-medium text-muted transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:text-faint/60"
+          >
+            <PlusIcon size={14} />
+            {config.elements.length >= MAX_ELEMENTS
+              ? `要素は${MAX_ELEMENTS}つまで`
+              : "要素を追加"}
+          </button>
+          <Hint>
+            左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
             <br />
-            「（」「）」で括弧を作れます（例：200 ＝（3 ＋ 7）× 20）。括弧を閉じるだけの行は、入力欄を空のままにしてください。
-          </p>
+            括弧の例：200 ＝（3 ＋ 7）× 20　※「）」だけの行はことばを空に。
+          </Hint>
         </Section>
 
-        <Section index="④" label="補足（画像の下のメッセージ）">
+        <Section
+          index="④"
+          icon={<NoteIcon size={14} />}
+          label="補足（画像の下のメッセージ）"
+        >
           <Field
             value={config.subNote}
             onChange={(value) => update({ subNote: value })}
@@ -559,19 +639,27 @@ export default function Editor() {
           />
         </Section>
 
-        <Section index="⑤" label="ハッシュタグ（画像の左下）">
+        <Section
+          index="⑤"
+          icon={<HashIcon size={14} />}
+          label="ハッシュタグ（画像の左下）"
+        >
           <Field
             value={config.hashtags}
             onChange={(value) => update({ hashtags: value })}
             placeholder="例：#ことばの方程式 #タグ"
             limit={LIMITS.hashtags}
           />
-          <p className="mt-1 text-[11px] leading-snug text-faint">
+          <Hint>
             スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
-          </p>
+          </Hint>
         </Section>
 
-        <Section index="⑥" label="アカウント名 / クレジット">
+        <Section
+          index="⑥"
+          icon={<UserIcon size={14} />}
+          label="アカウント名 / クレジット"
+        >
           <Field
             value={config.author}
             onChange={(value) => update({ author: value })}
@@ -605,7 +693,7 @@ export default function Editor() {
           </div>
         </Section>
 
-        <Section index="⑦" label="保存と公開">
+        <Section index="⑦" icon={<SaveIcon size={14} />} label="保存と公開">
           <div className="space-y-2">
             <Toggle
               checked={keepHistory}
@@ -624,44 +712,71 @@ export default function Editor() {
               </p>
             )}
           </div>
-          <p className="mt-1.5 text-[11px] leading-snug text-faint">
+          <Hint>
             履歴は保存・シェアしたときに、直近{HISTORY_LIMIT}件までこのブラウザに残ります（テンプレとして再利用できます）。
             {gallery.enabled
-              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。"
+              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。リンクや連絡先を含む式は公開されません。"
               : ""}
-          </p>
+          </Hint>
         </Section>
 
         <div className="space-y-2 p-3.5">
+          {/* Copying straight into a post is the most common finish, so it leads;
+              X only opens a compose window, so it sits last. */}
+          {canCopy && (
+            <button
+              onClick={() => void handleCopy()}
+              className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
+            >
+              <CopyIcon size={15} />
+              画像をコピー
+            </button>
+          )}
+          <button
+            onClick={() => void handleDownload()}
+            className={
+              canCopy
+                ? `${secondaryButtonClass} w-full`
+                : `${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`
+            }
+          >
+            <SaveIcon size={15} />
+            PNGで保存
+          </button>
           <button
             onClick={() => void handleShare()}
-            className={`${actionButtonClass} w-full px-5 py-3.5 text-[14px]`}
+            className={`${quietButtonClass} w-full`}
           >
+            <XIcon size={14} />
             画像を保存して X でシェア
           </button>
-          <div
-            className={`grid gap-2 ${canCopy ? "grid-cols-2" : "grid-cols-1"}`}
-          >
-            <button onClick={() => void handleDownload()} className={actionButtonClass}>
-              画像を保存（PNG）
-            </button>
-            {canCopy && (
-              <button onClick={() => void handleCopy()} className={actionButtonClass}>
-                画像をコピー
-              </button>
+          <div aria-live="polite" className="min-h-[28px]">
+            {status && (
+              <p
+                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${
+                  status.tone === "ok"
+                    ? "bg-accent/8 text-accent"
+                    : "bg-danger/8 text-danger"
+                }`}
+              >
+                {status.tone === "ok" ? (
+                  <CheckIcon size={13} />
+                ) : (
+                  <AlertIcon size={13} />
+                )}
+                <span className="min-w-0">{status.text}</span>
+              </p>
             )}
           </div>
-          <p className="h-4 text-center text-[11px] text-accent">
-            {status ?? ""}
-          </p>
           <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
             <p className="text-[11px] leading-snug text-faint">
               入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
             </p>
             <button
               onClick={resetAll}
-              className="shrink-0 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
             >
+              <RefreshIcon size={13} />
               入力をリセット
             </button>
           </div>
@@ -682,7 +797,8 @@ export default function Editor() {
               behind a disclosure instead of a row of five choices. */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
             <div className="flex min-w-0 items-center gap-2">
-              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[12px] font-semibold text-accent">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 text-[12px] font-semibold text-accent">
+                <FrameIcon size={13} />
                 {size.label}
               </span>
               <span className="truncate text-[11px] text-muted">
@@ -696,7 +812,7 @@ export default function Editor() {
               <button
                 onClick={() => setShowSizes((previous) => !previous)}
                 aria-expanded={showSizes}
-                className="rounded-md border border-edge px-2.5 py-1 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
+                className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
               >
                 サイズを変える
               </button>
@@ -711,11 +827,7 @@ export default function Editor() {
                     onClick={() => update({ sizeId: item.id })}
                     aria-pressed={config.sizeId === item.id}
                     title={item.hint}
-                    className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition ${
-                      config.sizeId === item.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.sizeId === item.id)} py-1.5`}
                   >
                     {item.label}
                     {item.id === RECOMMENDED_SIZE && (
@@ -736,27 +848,44 @@ export default function Editor() {
               className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 sm:max-h-[42vh] lg:max-h-[58vh]"
             />
           </div>
-          <p className="border-t border-line px-3 py-1.5 text-center text-[11px] text-faint lg:hidden">
-            入力するとこのプレビューにすぐ反映されます（スクロールしても上に残ります）
-          </p>
+          {/* The preview stays pinned while scrolling, so saving is always one
+              tap away on a phone. */}
+          <div className="flex items-center gap-2 border-t border-line px-3 py-2 lg:hidden">
+            {canCopy && (
+              <button
+                onClick={() => void handleCopy()}
+                className={`${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`}
+              >
+                <CopyIcon size={14} />
+                画像をコピー
+              </button>
+            )}
+            <button
+              onClick={() => void handleDownload()}
+              className={
+                canCopy
+                  ? `${secondaryButtonClass} shrink-0 px-3 py-2 text-[12px]`
+                  : `${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`
+              }
+            >
+              <SaveIcon size={14} />
+              PNGで保存
+            </button>
+          </div>
         </div>
       </div>
 
       <div className="order-3 min-w-0 lg:col-start-2 lg:row-start-2">
         <div className="divide-y divide-line rounded-2xl border border-line bg-panel shadow-card">
           <div className="grid sm:grid-cols-[190px_210px_minmax(0,1fr)] sm:divide-x sm:divide-line">
-            <Section label="書体">
+            <Section icon={<TypeIcon size={14} />} label="書体">
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
                   <button
                     key={id}
                     onClick={() => update({ fontId: id })}
                     aria-pressed={config.fontId === id}
-                    className={`rounded-lg border px-3 py-2 text-[12px] font-medium transition ${
-                      config.fontId === id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={choiceClass(config.fontId === id)}
                   >
                     {CANVAS_FONTS[id].label}
                   </button>
@@ -764,7 +893,7 @@ export default function Editor() {
               </div>
             </Section>
 
-            <Section label="レイアウト">
+            <Section icon={<LayoutIcon size={14} />} label="レイアウト">
               <div className="grid grid-cols-3 gap-1.5">
                 {LAYOUTS.map((layout) => (
                   <button
@@ -772,33 +901,23 @@ export default function Editor() {
                     onClick={() => update({ layoutId: layout.id })}
                     aria-pressed={config.layoutId === layout.id}
                     title={layout.hint}
-                    className={`rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
-                      config.layoutId === layout.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.layoutId === layout.id)} px-2`}
                   >
                     {layout.label}
                   </button>
                 ))}
               </div>
-              <p className="mt-2 text-[11px] leading-snug text-faint">
-                自動はできる限り横1行。入り切らない式だけ上下に分けます。
-              </p>
+              <Hint>自動はできる限り横1行。入り切らない式だけ上下に分けます。</Hint>
             </Section>
 
-            <Section label="配色">
+            <Section icon={<PaletteIcon size={14} />} label="配色">
               <div className="grid max-w-md grid-cols-3 gap-1.5">
                 {THEMES.map((theme) => (
                   <button
                     key={theme.id}
                     onClick={() => update({ themeId: theme.id })}
                     aria-pressed={config.themeId === theme.id}
-                    className={`flex items-center justify-center gap-2 rounded-lg border px-2 py-2 text-[12px] font-medium transition ${
-                      config.themeId === theme.id
-                        ? "border-accent bg-accent/5 text-accent"
-                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
-                    }`}
+                    className={`${choiceClass(config.themeId === theme.id)} flex items-center justify-center gap-2 px-2`}
                   >
                     <span
                       className="h-2.5 w-2.5 rounded-full border border-edge"
@@ -812,6 +931,7 @@ export default function Editor() {
           </div>
 
           <Section
+            icon={<SlidersIcon size={14} />}
             label="微調整（自動レイアウトの上書き）"
             hint={
               config.textScale !== 1 || config.marginScale !== 1
@@ -834,9 +954,9 @@ export default function Editor() {
               />
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
-              <p className="text-[11px] leading-snug text-faint">
+              <Hint>
                 文字数が多い式は自動で縮小されます。もう少し大きく／余白を狭くしたいときだけ動かしてください（はみ出す手前で自動的に止まります）。
-              </p>
+              </Hint>
               <button
                 onClick={() => update({ textScale: 1, marginScale: 1 })}
                 disabled={config.textScale === 1 && config.marginScale === 1}
@@ -847,67 +967,119 @@ export default function Editor() {
             </div>
           </Section>
 
-          <Section label="今日のテンプレート" hint={`${DAILY_PRESET_COUNT}件`}>
-            <p className="mb-1.5 text-[11px] text-faint">
-              1日に1回入れ替わります。クリックすると入力欄に読み込みます。
-            </p>
+          <Section
+            icon={<SearchIcon size={14} />}
+            label="式をさがす（テンプレート・履歴）"
+            hint={query ? `${hits.length}件` : undefined}
+          >
+            <div className="relative">
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="例：睡眠 / しあわせ / 会議"
+                className={`${fieldClass} w-full pl-9`}
+              />
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
+                <SearchIcon size={14} />
+              </span>
+            </div>
+            {!query.trim() && (
+              <p className="mt-2 text-[11px] text-faint">
+                テンプレート約{PRESET_VARIATIONS.toLocaleString("ja-JP")}通りと、この端末の履歴
+                {searchableCount}件から探せます。
+              </p>
+            )}
+            {query.trim() &&
+              (hits.length === 0 ? (
+                <p className="mt-2 text-[11px] text-faint">
+                  一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
+                </p>
+              ) : (
+                <ul className="mt-2 space-y-1">
+                  {hits.map((hit) => (
+                    <li key={`${hit.kind}-${hit.id}`}>
+                      <button
+                        onClick={() => applyHit(hit)}
+                        title={hit.text}
+                        className="flex w-full items-center gap-2 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
+                      >
+                        <span
+                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                            hit.kind === "history"
+                              ? "bg-accent/10 text-accent"
+                              : "bg-panel text-faint"
+                          }`}
+                        >
+                          {hit.kind === "history" ? "履歴" : "テンプレ"}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
+                          {hit.text}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ))}
+            <Hint label="検索について">
+              テンプレートとこの端末の履歴をまとめて探します。ひらがな・カタカナ・漢字の違いや、1文字くらいの打ち間違いは自動で吸収します（スペース区切りで複数のことばを指定すると、両方を含む式だけが残ります）。書きかけの式や、ことばになっていない履歴は結果に出ません。
+            </Hint>
+          </Section>
+
+          <Section
+            tone="info"
+            icon={<CalendarIcon size={14} />}
+            label="今日のテンプレート"
+            hint={`${DAILY_PRESET_COUNT}件`}
+          >
             <div className="flex flex-wrap gap-1.5">
               {todaysPresets.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset)}
-                  title={preset.subNote}
+                  title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
+                    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+                    .join("")}`}
                   className={chipClass}
                 >
                   {preset.label}
                 </button>
               ))}
             </div>
-            <details className="mt-3 group">
-              <summary className="cursor-pointer list-none text-[11px] font-medium text-muted transition hover:text-accent">
-                すべてのテンプレート（{PRESETS.length}件）を見る
-              </summary>
-              <div className="mt-2.5 space-y-3">
-                {PRESET_CATEGORIES.map((category) => (
-                  <div key={category}>
-                    <p className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-faint">
-                      {category}
-                    </p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {PRESETS.filter((preset) => preset.category === category).map(
-                        (preset) => (
-                          <button
-                            key={preset.id}
-                            onClick={() => applyPreset(preset)}
-                            title={preset.subNote}
-                            className={chipClass}
-                          >
-                            {preset.label}
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </details>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <Hint label="テンプレートについて">
+                1日に1回入れ替わります。クリックすると入力欄に読み込みます。候補は全部で約
+                {PRESET_VARIATIONS.toLocaleString("ja-JP")}通りあり、「別の10件」で順に見られます。
+              </Hint>
+              <button
+                onClick={() => setPresetRound((round) => round + 1)}
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
+              >
+                <RefreshIcon size={13} />
+                別の10件
+              </button>
+            </div>
           </Section>
 
           <Section
+            tone="info"
+            icon={<ClockIcon size={14} />}
             label="直近の履歴"
             hint={entries.length > 0 ? `${entries.length} / ${HISTORY_LIMIT}` : undefined}
           >
             {entries.length === 0 ? (
               <p className="text-[11px] text-faint">
-                画像を保存すると、直近{HISTORY_LIMIT}件がここに残ります（テンプレとして使えます）。
+                画像を保存すると、この端末に最大{HISTORY_LIMIT}件が残ります（テンプレとして使えます）。
               </p>
             ) : (
               <>
                 <p className="mb-1.5 text-[11px] text-faint">
                   クリックすると、その式をテンプレとして読み込みます。
+                  {entries.length > HISTORY_VISIBLE &&
+                    `新しい${HISTORY_VISIBLE}件だけを表示しています（残りは上の検索から）。`}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
-                  {entries.map((entry) => (
+                  {entries.slice(0, HISTORY_VISIBLE).map((entry) => (
                     <button
                       key={entry.id}
                       onClick={() => restore(entry)}
@@ -930,6 +1102,8 @@ export default function Editor() {
 
           {gallery.enabled && (
             <Section
+              tone="info"
+              icon={<UsersIcon size={14} />}
               label={`みんなの作品（最新${GALLERY_LIMIT}件・リアルタイム）`}
               hint={gallery.items.length > 0 ? `${gallery.items.length}` : undefined}
             >
@@ -970,19 +1144,46 @@ export default function Editor() {
 }
 
 // text-base on mobile keeps iOS Safari from zooming in when a field is focused.
+// A 1.5px control border plus the inset shadow is what separates a field from
+// the white card behind it.
 const fieldClass =
-  "h-10 rounded-lg border border-edge bg-raised px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/40 focus:border-accent focus:bg-panel focus:shadow-none focus:ring-2 focus:ring-accent/15 sm:text-[13px]";
+  "h-10 rounded-lg border-[1.5px] border-control bg-white px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/70 focus:border-accent focus:shadow-none focus:ring-[3px] focus:ring-accent/20 sm:text-[13px]";
 
 const chipClass =
-  "rounded-md border border-edge bg-panel px-2.5 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:text-accent";
+  "rounded-md border-[1.5px] border-control bg-panel px-2.5 py-1.5 text-[12px] font-medium text-fg transition hover:border-accent hover:text-accent";
 
 /** Square, glyph-first button used for the relation symbols. */
 function symbolChipClass(active: boolean) {
-  return `flex h-10 w-10 items-center justify-center rounded-lg border text-[15px] font-medium transition ${
+  return `flex h-10 w-10 items-center justify-center rounded-lg border-[1.5px] text-[15px] font-medium transition ${
     active
-      ? "border-accent bg-accent/5 text-accent"
-      : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
+      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
+      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
   }`;
+}
+
+/** Same treatment for every 「選ぶ」 button (font, layout, theme, size). */
+function choiceClass(active: boolean) {
+  return `rounded-lg border-[1.5px] px-3 py-2 text-[12px] font-medium transition ${
+    active
+      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
+      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
+  }`;
+}
+
+/**
+ * Secondary copy lives behind a disclosure: the people who need it can open it,
+ * everyone else keeps a shorter form.
+ */
+function Hint({ children, label = "詳しい説明" }: { children: React.ReactNode; label?: string }) {
+  return (
+    <details className="mt-2">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[11px] font-medium text-muted transition hover:text-accent">
+        <InfoIcon size={12} />
+        {label}
+      </summary>
+      <div className="mt-1.5 text-[11px] leading-snug text-faint">{children}</div>
+    </details>
+  );
 }
 
 function ChevronIcon() {
@@ -1032,28 +1233,21 @@ function Slider({
         step={range.step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1.5 h-1.5 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
+        className="mt-1.5 h-2 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
       />
     </label>
   );
 }
 
-const actionButtonClass =
-  "rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark active:translate-y-px";
+/** One filled button leads; the rest stay quiet so the main action is obvious. */
+const primaryButtonClass =
+  "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
 
-function TrashIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <path
-        d="M2.5 4h11M6 4V2.5h4V4M4 4l.7 9.5h6.6L12 4M6.6 6.5v5M9.4 6.5v5"
-        stroke="currentColor"
-        strokeWidth="1.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
+const secondaryButtonClass =
+  "inline-flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-control bg-panel px-4 py-3 text-[13px] font-semibold text-fg transition hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
+
+const quietButtonClass =
+  "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-[12px] font-medium text-muted transition hover:bg-raised hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 function Field({
   value,
@@ -1112,44 +1306,65 @@ function Toggle({
   label: string;
 }) {
   return (
-    <label className="flex items-center gap-2 text-[11px] text-muted">
+    <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] text-fg transition hover:border-accent/70">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="h-3.5 w-3.5 accent-accent"
+        className="h-4 w-4 shrink-0 accent-accent"
       />
       {label}
     </label>
   );
 }
 
+/**
+ * Icon colours follow one rule: blue for anything you fill in or choose, grey
+ * for read-only lists. Gold is reserved for donations and red for destructive
+ * actions, so the palette never grows past four meanings.
+ */
 function Section({
   index,
+  icon,
   label,
   hint,
+  tone = "input",
   children,
 }: {
   index?: string;
+  /** Small pictogram shown in a tinted tile, so sections are scannable. */
+  icon?: React.ReactNode;
   label: string;
   hint?: string;
+  tone?: "input" | "info";
   children: React.ReactNode;
 }) {
   return (
     <section className="px-3.5 py-3.5">
-      <div className="mb-2 flex items-center justify-between">
+      <div className="mb-2 flex items-center justify-between gap-2">
         <h2
-          className={
+          className={`flex min-w-0 items-center gap-2 ${
             index
-              ? "flex items-center gap-1.5 text-[12px] font-semibold text-fg"
-              : "text-[10px] font-semibold uppercase tracking-[0.08em] text-faint"
-          }
+              ? "text-[12px] font-semibold text-fg"
+              : "text-[11px] font-semibold text-muted"
+          }`}
         >
-          {index && <span className="text-accent">{index}</span>}
-          {label}
+          {icon && (
+            <span
+              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+                tone === "input" ? "bg-accent/10 text-accent" : "bg-raised text-faint"
+              }`}
+            >
+              {icon}
+            </span>
+          )}
+          <span className="truncate">
+            {index && <span className="mr-1 text-accent">{index}</span>}
+            {label}
+          </span>
         </h2>
         {hint && (
-          <span className="font-mono text-[10px] text-faint">{hint}</span>
+          <span className="shrink-0 font-mono text-[10px] text-faint">{hint}</span>
         )}
       </div>
       {children}

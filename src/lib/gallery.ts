@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { checkPublicText, checkPublishRate, notePublish } from "./moderation";
 import { LIMITS, MAX_ELEMENTS, type FormulaConfig, type FormulaElement } from "./types";
 
 /**
@@ -121,12 +122,23 @@ export function subscribeToInserts(onInsert: (item: GalleryItem) => void): () =>
   };
 }
 
-export async function publish(config: FormulaConfig): Promise<boolean> {
+export type PublishResult = { ok: boolean; reason?: string };
+
+export async function publish(config: FormulaConfig): Promise<PublishResult> {
   const supabase = getClient();
-  if (!supabase) return false;
+  if (!supabase) return { ok: false, reason: "公開は準備中です" };
   const elements = toElements(config.elements);
   const resultText = clean(config.resultText, LIMITS.resultText);
-  if (!resultText || elements.length === 0) return false;
+  if (!resultText || elements.length === 0) {
+    return { ok: false, reason: "結果と要素を入力してください" };
+  }
+  const allowed = checkPublicText({
+    body: [resultText, ...elements.map((element) => element.text), config.subNote, config.hashtags],
+    author: config.author,
+  });
+  if (!allowed.ok) return allowed;
+  const rate = checkPublishRate();
+  if (!rate.ok) return rate;
   const { error } = await supabase.from(TABLE).insert({
     result_text: resultText,
     relation: clean(config.relation, LIMITS.relation) || "＝",
@@ -135,7 +147,9 @@ export async function publish(config: FormulaConfig): Promise<boolean> {
     hashtags: clean(config.hashtags, LIMITS.hashtags),
     author: clean(config.author, LIMITS.author),
   });
-  return !error;
+  if (error) return { ok: false, reason: "公開できませんでした。時間をおいてお試しください" };
+  notePublish();
+  return { ok: true };
 }
 
 export function galleryText(item: GalleryItem): string {

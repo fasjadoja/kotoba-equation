@@ -16,18 +16,8 @@ body {
   font-feature-settings: "palt" 1;
 }
 
-/* Brand texture: a fine dot grid with a light wash that keeps the top of the
-   page airy. Fixed so it parallaxes gently against the scrolling content. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -2;
-  background-image: radial-gradient(circle at 1px 1px, rgba(24, 36, 58, 0.05) 1px, transparent 0);
-  background-size: 24px 24px;
-  pointer-events: none;
-}
-
+/* A light wash that keeps the top of the page airy. Fixed so it stays put
+   while the content scrolls. */
 body::after {
   content: "";
   position: fixed;

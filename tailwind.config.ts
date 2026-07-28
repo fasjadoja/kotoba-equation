@@ -15,6 +15,8 @@ export default {
         raised: "#F6F8FB",
         line: "#E4E8EE",
         edge: "#D3D9E2",
+        /** border of anything you can type in or choose */
+        control: "#A9B6C8",
         /** text */
         fg: "#151A22",
         muted: "#556170",

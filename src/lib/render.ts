@@ -6,6 +6,7 @@ import {
   type FormulaConfig,
   type FormulaElement,
 } from "./types";
+import { SITE } from "./site";
 import { getTheme } from "./themes";
 import {
   MARK_ASPECT,
@@ -18,6 +19,9 @@ export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
 
 export const WORDMARK = "ことばの方程式";
+
+/** Printed after the wordmark so a reposted image still names where it came from. */
+export const SITE_LABEL = SITE.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const NO_LINE_START = new Set(
   "、。，．・：；！？）】』」〉》”’ゝゞーぁぃぅぇぉっゃゅょゎヵヶァィゥェォッャュョヮ!?),.:;]}".split(
@@ -359,27 +363,6 @@ function buildBlocks(
   return { blocks, height, broken };
 }
 
-/** Faint dot grid inside the frame: the print-like texture of the brand. */
-function drawDotGrid(
-  ctx: CanvasRenderingContext2D,
-  color: string,
-  inset: number,
-  width: number,
-  height: number,
-  base: number,
-) {
-  const step = 22 * base;
-  const radius = Math.max(0.8, 1.1 * base);
-  ctx.fillStyle = color;
-  for (let y = inset + step; y < height - inset; y += step) {
-    for (let x = inset + step; x < width - inset; x += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-}
-
 /** Normalises the free-form hashtag field into a single "#a #b" line. */
 export function hashtagText(config: FormulaConfig): string {
   return config.hashtags
@@ -411,7 +394,6 @@ export function drawFormula(
   ctx.fillRect(0, 0, width, height);
 
   const inset = Math.round(Math.min(width, height) * 0.05);
-  drawDotGrid(ctx, theme.grid, inset, width, height, base);
   ctx.strokeStyle = theme.frame;
   ctx.lineWidth = Math.max(1, base);
   ctx.strokeRect(inset + 0.5, inset + 0.5, width - inset * 2 - 1, height - inset * 2 - 1);
@@ -443,17 +425,16 @@ export function drawFormula(
     ctx.font = font(normalWeight, 13 * base, fontStack);
     const wordX = marginX + markWidth + 9 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
-    if (premium) {
-      const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
-      ctx.font = font(normalWeight, 9.5 * base, fontStack);
-      fillTracked(
-        ctx,
-        "✦ SUPPORTER",
-        wordX + wordWidth + 9 * base,
-        headerY,
-        1.6 * base,
-      );
-    }
+    const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
+    ctx.font = font(normalWeight, 9.5 * base, fontStack);
+    if (!premium) ctx.fillStyle = theme.hashtag;
+    fillTracked(
+      ctx,
+      premium ? "✦ SUPPORTER" : SITE_LABEL,
+      wordX + wordWidth + 9 * base,
+      headerY,
+      1.6 * base,
+    );
   }
 
   const availableTop = headerY + 34 * base;

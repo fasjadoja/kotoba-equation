@@ -1,12 +1,19 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { checkPublicText, checkPublishRate, notePublish } from "./moderation";
+import { QUALITY_MIN, formulaQuality } from "./quality";
 import { LIMITS, MAX_ELEMENTS, type FormulaConfig, type FormulaElement } from "./types";
 
 /**
- * Opt-in public gallery. Nothing is sent anywhere unless the user ticks
- * 「みんなの作品に載せる」, and only the text of the formula is stored.
+ * Opt-in public wall. Nothing is sent anywhere unless the user presses
+ * 「みんなの式に載せる」, and only the text of the formula is stored.
  */
 export const GALLERY_LIMIT = 20;
+
+/** Read more rows than are shown, because the weakest ones get dropped. */
+const FETCH_LIMIT = GALLERY_LIMIT * 3;
+
+/** A wall nobody can reach must not leave the panel spinning. */
+const FETCH_TIMEOUT_MS = 6000;
 
 const TABLE = "public_formulas";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -88,18 +95,41 @@ export function toGalleryItem(value: unknown): GalleryItem | null {
   };
 }
 
+/**
+ * The same score decides what may be published and what is worth reading, so
+ * rows written before a rule changed (or straight into the table) still get
+ * filtered out here rather than reaching the wall.
+ */
+export function passesQuality(item: GalleryItem): boolean {
+  return formulaQuality(item).score >= QUALITY_MIN;
+}
+
+/** Newer equations win ties, but a clearer one outranks a fresher one. */
+function rank(item: GalleryItem): number {
+  const ageDays = (Date.now() - new Date(item.createdAt).getTime()) / 86_400_000;
+  return formulaQuality(item).score - Math.min(0.3, ageDays * 0.02);
+}
+
 export async function fetchLatest(): Promise<GalleryItem[]> {
   const supabase = getClient();
   if (!supabase) return [];
-  const { data, error } = await supabase
+  const query = supabase
     .from(TABLE)
     .select("id, created_at, result_text, relation, elements, sub_note, hashtags, author")
     .order("created_at", { ascending: false })
-    .limit(GALLERY_LIMIT);
+    .limit(FETCH_LIMIT)
+    .then((response) => response, () => ({ data: null, error: true }));
+  const timeout = new Promise<{ data: null; error: true }>((resolve) => {
+    setTimeout(() => resolve({ data: null, error: true }), FETCH_TIMEOUT_MS);
+  });
+  const { data, error } = await Promise.race([query, timeout]);
   if (error || !data) return [];
   return data
     .map(toGalleryItem)
-    .filter((item): item is GalleryItem => item !== null);
+    .filter((item): item is GalleryItem => item !== null)
+    .filter(passesQuality)
+    .sort((a, b) => rank(b) - rank(a))
+    .slice(0, GALLERY_LIMIT);
 }
 
 /** Streams newly published formulas so the list stays live without polling. */
@@ -113,7 +143,7 @@ export function subscribeToInserts(onInsert: (item: GalleryItem) => void): () =>
       { event: "INSERT", schema: "public", table: TABLE },
       (payload) => {
         const item = toGalleryItem(payload.new);
-        if (item) onInsert(item);
+        if (item && passesQuality(item)) onInsert(item);
       },
     )
     .subscribe();
@@ -132,6 +162,15 @@ export async function publish(config: FormulaConfig): Promise<PublishResult> {
   if (!resultText || elements.length === 0) {
     return { ok: false, reason: "結果と要素を入力してください" };
   }
+  const quality = formulaQuality({
+    resultText,
+    relation: config.relation,
+    elements,
+    subNote: config.subNote,
+  });
+  if (quality.score < QUALITY_MIN) {
+    return { ok: false, reason: quality.reason ?? "もう少し具体的な式にしてください" };
+  }
   const allowed = checkPublicText({
     body: [resultText, ...elements.map((element) => element.text), config.subNote, config.hashtags],
     author: config.author,
@@ -146,7 +185,7 @@ export async function publish(config: FormulaConfig): Promise<PublishResult> {
     sub_note: clean(config.subNote, LIMITS.subNote),
     hashtags: clean(config.hashtags, LIMITS.hashtags),
     author: clean(config.author, LIMITS.author),
-  });
+  }).then((response) => response, () => ({ error: true }));
   if (error) return { ok: false, reason: "公開できませんでした。時間をおいてお試しください" };
   notePublish();
   return { ok: true };

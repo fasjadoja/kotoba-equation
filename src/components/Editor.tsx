@@ -34,6 +34,7 @@ import {
   type Operator,
 } from "@/lib/types";
 import { SHARE_HASHTAGS, SITE } from "@/lib/site";
+import { galleryText, relativeTime, type GalleryItem } from "@/lib/gallery";
 import {
   AlertIcon,
   BlocksIcon,
@@ -58,6 +59,7 @@ import {
   TrashIcon,
   TypeIcon,
   UserIcon,
+  UsersIcon,
   XIcon,
 } from "./icons";
 import {
@@ -69,6 +71,7 @@ import {
 import { searchAll, type SearchHit } from "@/lib/search";
 import PreviewDialog from "./PreviewDialog";
 import { useDraft } from "@/hooks/useDraft";
+import { useGallery } from "@/hooks/useGallery";
 import { useSupporter } from "@/hooks/useSupporter";
 
 const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
@@ -156,6 +159,8 @@ export default function Editor() {
   const [hidePreview, setHidePreview] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
+  const wall = useGallery();
+  const [publishing, setPublishing] = useState(false);
   const supporter = useSupporter();
   const unlockedRank = supporter.rank;
   const unlockRule = supporter.rule;
@@ -292,6 +297,40 @@ export default function Editor() {
     });
     setCustomOps([]);
     setCustomRelation(!isPresetRelation(preset.relation ?? "＝"));
+  };
+
+  /** Someone else's equation is a starting point, not their post: only the
+      words come across, never the author line. */
+  const adoptShared = (item: GalleryItem) => {
+    update({
+      resultText: item.resultText,
+      relation: item.relation || "＝",
+      subNote: item.subNote,
+      elements: item.elements.map((element) => ({ ...element })),
+    });
+    setCustomOps(
+      item.elements.map((element) => !!element.op && !isPresetOperator(element.op)),
+    );
+    setCustomRelation(!isPresetRelation(item.relation || "＝"));
+    notify("みんなの式を読み込みました。自由に書き換えてください");
+  };
+
+  const handlePublish = async () => {
+    if (publishing) return;
+    if (
+      !window.confirm(
+        "この式のことばを「みんなの式」に公開します（あとから消せません）。よろしいですか？",
+      )
+    ) {
+      return;
+    }
+    setPublishing(true);
+    const result = await wall.share(config);
+    setPublishing(false);
+    notify(
+      result.ok ? "みんなの式に公開しました" : (result.reason ?? "公開できませんでした"),
+      result.ok ? "ok" : "error",
+    );
   };
 
   const restore = (entry: HistoryEntry) => {
@@ -1174,6 +1213,40 @@ export default function Editor() {
 
 
 
+          {wall.enabled && (
+            <Section
+              tone="info"
+              icon={<UsersIcon size={14} />}
+              label="みんなの式（ほかの人が公開したもの）"
+            >
+              {wall.loading ? (
+                <p className="text-[11px] text-faint">読み込んでいます…</p>
+              ) : wall.items.length === 0 ? (
+                <p className="text-[11px] text-faint">
+                  まだ公開された式がありません。⑧から公開できます。
+                </p>
+              ) : (
+                <>
+                  <p className="mb-1.5 text-[11px] text-faint">
+                    クリックすると、その式を下書きとして読み込みます（読みやすい式だけを選んで表示しています）。
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {wall.items.map((item) => (
+                      <button
+                        key={item.id}
+                        onClick={() => adoptShared(item)}
+                        className={`${chipClass} max-w-full truncate`}
+                        title={`${galleryText(item)}（${relativeTime(item.createdAt)}）`}
+                      >
+                        {galleryText(item)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Section>
+          )}
+
           <Section
             tone="info"
             icon={<ClockIcon size={14} />}
@@ -1256,6 +1329,23 @@ export default function Editor() {
                 X でシェア
               </button>
             </div>
+            {/* Publishing is a separate, deliberate press: everything else on
+                this page keeps the text inside the browser. */}
+            {wall.enabled && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2.5">
+                <button
+                  onClick={() => void handlePublish()}
+                  disabled={publishing}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:text-faint/60"
+                >
+                  <UsersIcon size={12} />
+                  {publishing ? "公開しています…" : "みんなの式に載せる（任意）"}
+                </button>
+                <span className="text-[11px] text-faint">
+                  ことばだけが公開されます。名前・画像・履歴は送られません。
+                </span>
+              </div>
+            )}
             <div aria-live="polite" className="min-h-[28px]">
               {status && (
                 <p

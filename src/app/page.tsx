@@ -97,9 +97,19 @@ export default function Home() {
         "@type": "Brand",
         "@id": `${SITE.url}/#brand`,
         name: SITE.name,
+        alternateName: ["言葉の方程式", "Kotoba Equation"],
         url: SITE.url,
         logo: `${SITE.url}/icon.svg`,
         ...(SOCIAL.tiktok ? { sameAs: [SOCIAL.tiktok] } : {}),
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE.url}/#website`,
+        name: SITE.name,
+        alternateName: "言葉の方程式",
+        url: SITE.url,
+        inLanguage: "ja",
+        publisher: { "@id": `${SITE.url}/#brand` },
       },
       {
         "@type": "FAQPage",
@@ -127,19 +137,21 @@ export default function Home() {
             <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
             登録不要・無料・広告なし
           </p>
+          {/* The brand name carries the h1 so a search for it lands here. */}
           <h1 className="mt-3 text-[24px] font-semibold tracking-tight text-fg sm:text-[32px]">
-            思っていることを、
             <span className="relative whitespace-nowrap">
-              方程式
+              ことばの方程式
               <span
                 className="absolute inset-x-0 bottom-0.5 -z-10 h-2.5 rounded-sm bg-gradient-to-r from-[#74B2FF]/30 to-[#8C65FF]/30"
                 aria-hidden
               />
             </span>
-            にする。
+            <span className="mt-1 block text-[15px] font-medium text-muted sm:text-[18px]">
+              思っていることを、1枚の画像にする無料ツール
+            </span>
           </h1>
           <p className="mx-auto mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-            「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も、スマホに合うサイズの1枚に。
+            「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も、スマホに合うサイズの1枚に。登録不要・無料で、そのままXやInstagramに投稿できます。
           </p>
         </div>
 

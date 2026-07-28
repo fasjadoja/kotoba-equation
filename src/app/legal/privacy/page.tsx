@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import LegalPage from "../LegalPage";
+import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "プライバシーポリシー" };
+export const metadata: Metadata = {
+  title: "プライバシーポリシー",
+  description: "「ことばの方程式」のプライバシーポリシーです。入力した内容はブラウザ内で処理され、サーバーには送られません。",
+  alternates: { canonical: `${SITE.url}/legal/privacy` },
+};
 
 const SECTIONS = [
   {

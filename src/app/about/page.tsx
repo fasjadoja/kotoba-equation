@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
+import { donateButtonClass } from "@/components/DonateButton";
 import { LogoMark } from "@/components/Logo";
-import { SITE, SOCIAL } from "@/lib/site";
+import { DONATE_ANCHOR, DONATE_ENABLED, SITE, SOCIAL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "このサイトについて",
@@ -28,7 +28,7 @@ const SECTIONS = [
   {
     title: "運営の方針",
     body: [
-      "広告を貼らず、有料プランも作らず、機能を制限しません。運営費はサーバー代とドメイン代くらいなので、任意の寄付（500円・1回限り）だけでまかなっています。寄付をいただいた方には、24時間だけ画像のロゴが金色になるお礼を用意しています。",
+      "広告を貼らず、有料プランも作らず、機能を制限しません。運営費はサーバー代とドメイン代くらいなので、任意の寄付（300円〜・1回限り）だけでまかなっています。寄付をいただいた方には、24時間だけ画像のロゴが金色になるお礼を用意しています。",
       "使ってくれた方の入力を広告やAIの学習に売ることはしません。運営が続けられなくなった場合は、事前に告知したうえで終了します。",
     ],
   },
@@ -75,15 +75,12 @@ export default function AboutPage() {
       </div>
 
       <div className="mt-10 flex flex-wrap items-center gap-3 border-t border-line pt-6">
-        {SITE.donateUrl && (
+        {DONATE_ENABLED && (
           <a
-            href={SITE.donateUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/#${DONATE_ANCHOR}`}
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
-            <CoffeeIcon />
-            500円を寄付する
+            寄付する
           </a>
         )}
         {SOCIAL.tiktok && (

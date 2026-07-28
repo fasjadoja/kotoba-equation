@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { SITE, SOCIAL } from "@/lib/site";
+import { DONATE_ANCHOR, DONATE_ENABLED, SITE, SOCIAL } from "@/lib/site";
 import { LogoMark } from "@/components/Logo";
 import { jpMonoFont, jpSansFont, monoFont, uiFont } from "@/lib/fonts";
 
@@ -80,14 +80,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 TikTok
               </a>
             )}
-            {SITE.donateUrl && (
-              <a
-                href={SITE.donateUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="transition hover:text-fg"
-              >
-                寄付する（500円）
+            {DONATE_ENABLED && (
+              <a href={`/#${DONATE_ANCHOR}`} className="transition hover:text-fg">
+                寄付する
               </a>
             )}
             <span className="ml-auto">

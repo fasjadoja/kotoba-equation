@@ -90,6 +90,12 @@ export function normalizeConfig(value: unknown): FormulaConfig | null {
   };
 }
 
+function isBlank(config: FormulaConfig) {
+  return (
+    !config.resultText.trim() && config.elements.every((element) => !element.text.trim())
+  );
+}
+
 /**
  * Keeps the last edit in the browser so closing the tab does not lose it.
  * Nothing is sent anywhere; the draft lives next to the history in localStorage.
@@ -103,7 +109,21 @@ export function useDraft(apply: (config: FormulaConfig) => void) {
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       const draft = raw ? normalizeConfig(JSON.parse(raw) as unknown) : null;
-      if (draft) applyRef.current(draft);
+      // An all-empty draft would greet the next visit with a blank canvas, so
+      // the sample text comes back while the style choices are kept.
+      if (draft)
+        applyRef.current(
+          isBlank(draft)
+            ? {
+                ...draft,
+                resultText: DEFAULT_CONFIG.resultText,
+                relation: DEFAULT_CONFIG.relation,
+                elements: DEFAULT_CONFIG.elements,
+                subNote: DEFAULT_CONFIG.subNote,
+                hashtags: DEFAULT_CONFIG.hashtags,
+              }
+            : draft,
+        );
     } catch {
       // A corrupted draft simply falls back to the default example.
     }

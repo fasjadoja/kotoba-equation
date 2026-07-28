@@ -72,7 +72,7 @@ npm run dev
 | 環境変数 | 用途 |
 | --- | --- |
 | `NEXT_PUBLIC_SITE_URL` | 公開URL（OGP・sitemap・canonical に使用） |
-| `NEXT_PUBLIC_DONATE_URL` | 寄付ページのURL。未設定なら寄付リンクは表示されません |
+| `NEXT_PUBLIC_DONATE_URL` | 寄付ページのURL（既定値は Stripe Payment Link）。空文字列にすると寄付リンクごと非表示 |
 | `NEXT_PUBLIC_CONTACT_URL` | 問い合わせ先URL（任意） |
 | `NEXT_PUBLIC_SUPPORTER_KEY` | サポーター特典を解錠する合い言葉（未設定なら `coffee-thanks`） |
 | `NEXT_PUBLIC_SUPABASE_URL` | 「みんなの作品」用 Supabase プロジェクトURL。未設定なら公開機能ごと非表示 |
@@ -85,6 +85,15 @@ npm run dev
 3. Project Settings → API の URL と anon key を上記の環境変数に設定
 
 公開されるのはユーザーがチェックした式だけ。保存するのは式の文字（結果・関係記号・要素・補足・ハッシュタグ・クレジット）だけで、IPや端末情報は保存しません。
+
+### 寄付（Stripe Payment Link）
+
+1. Stripe ダッシュボード → 決済用リンク → 商品を JPY の 1 回限り価格で作成
+2. 詳細設定の「ボタンを表示」を「寄付」にする（URL が `donate.stripe.com` になる）
+3. 支払い完了ページを「確認ページを表示しない」にし、`https://<ドメイン>/?thanks=<SUPPORTER_KEY>` へリダイレクト
+4. 発行された URL に `?locale=ja` を付けて `NEXT_PUBLIC_DONATE_URL` に設定（日本語固定で開く）
+
+チェックアウトのロゴ・色は Stripe の「ブランディング」設定でサイトと揃えています。
 
 ### サポーター特典（ゴールドのロゴ）
 

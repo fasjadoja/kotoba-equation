@@ -7,8 +7,6 @@ export type Theme = {
   brand: string;
   /** Brand-colored detail such as the relation glyph. */
   accent: string;
-  /** Dot grid printed behind the composition. */
-  grid: string;
   title: string;
   element: string;
   operator: string;
@@ -27,7 +25,6 @@ export const THEMES: Theme[] = [
     frame: "#E5E9EE",
     brand: "#98A2AE",
     accent: "#0B6BCB",
-    grid: "#ECEFF4",
     title: "#131820",
     element: "#131820",
     operator: "#1478DC",
@@ -43,7 +40,6 @@ export const THEMES: Theme[] = [
     frame: "#DFE4EB",
     brand: "#8C94A0",
     accent: "#0B6BCB",
-    grid: "#E6EAF0",
     title: "#151B23",
     element: "#151B23",
     operator: "#1478DC",
@@ -59,7 +55,6 @@ export const THEMES: Theme[] = [
     frame: "#2A3242",
     brand: "#7E8896",
     accent: "#4B9BFF",
-    grid: "#1A2130",
     title: "#F2F4F8",
     element: "#F2F4F8",
     operator: "#68AEFF",

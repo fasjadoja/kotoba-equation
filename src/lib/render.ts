@@ -363,27 +363,6 @@ function buildBlocks(
   return { blocks, height, broken };
 }
 
-/** Faint dot grid inside the frame: the print-like texture of the brand. */
-function drawDotGrid(
-  ctx: CanvasRenderingContext2D,
-  color: string,
-  inset: number,
-  width: number,
-  height: number,
-  base: number,
-) {
-  const step = 22 * base;
-  const radius = Math.max(0.8, 1.1 * base);
-  ctx.fillStyle = color;
-  for (let y = inset + step; y < height - inset; y += step) {
-    for (let x = inset + step; x < width - inset; x += step) {
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-}
-
 /** Normalises the free-form hashtag field into a single "#a #b" line. */
 export function hashtagText(config: FormulaConfig): string {
   return config.hashtags
@@ -415,7 +394,6 @@ export function drawFormula(
   ctx.fillRect(0, 0, width, height);
 
   const inset = Math.round(Math.min(width, height) * 0.05);
-  drawDotGrid(ctx, theme.grid, inset, width, height, base);
   ctx.strokeStyle = theme.frame;
   ctx.lineWidth = Math.max(1, base);
   ctx.strokeRect(inset + 0.5, inset + 0.5, width - inset * 2 - 1, height - inset * 2 - 1);

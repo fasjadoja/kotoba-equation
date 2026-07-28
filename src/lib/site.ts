@@ -11,7 +11,8 @@ export const SITE = {
 /** Official accounts. Listed in the page's JSON-LD so search engines can tell
  *  this brand apart from look-alike sites. */
 export const SOCIAL = {
-  tiktok: process.env.NEXT_PUBLIC_TIKTOK_URL ?? "",
+  tiktok:
+    process.env.NEXT_PUBLIC_TIKTOK_URL ?? "https://www.tiktok.com/@yuusuusr0ar",
 };
 
 export const SHARE_HASHTAGS = ["ことばの方程式"];

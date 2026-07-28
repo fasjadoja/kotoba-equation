@@ -535,7 +535,7 @@ export default function Editor() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-[#7A5A10]">
-              ご支援ありがとうございます。寄付した方限定の「{supporter.rule.label}」を解錠しました。
+              ご支援ありがとうございます。チップを送った方限定の「{supporter.rule.label}」を解錠しました。
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#8A6A1C]">
               ⑥の「{supporter.rule.label}にする」をONにすると、画像のロゴが変わります。
@@ -898,7 +898,7 @@ export default function Editor() {
                   onChange={(checked) =>
                     update({ logoRank: checked ? unlockedRank : "brand" })
                   }
-                  label={`${unlockRule.label}にする（寄付した方限定）`}
+                  label={`${unlockRule.label}にする（チップを送った方限定）`}
                   disabled={!config.showWatermark}
                 />
                 <p className="text-[11px] leading-snug text-[#8A6A1C]">

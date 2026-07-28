@@ -35,7 +35,7 @@ export default function SiteHeader() {
             href={`/#${DONATE_ANCHOR}`}
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
-            寄付する
+            チップを送る
           </a>
         )}
       </div>

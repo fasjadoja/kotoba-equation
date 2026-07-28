@@ -7,7 +7,12 @@ import {
   type FormulaElement,
 } from "./types";
 import { getTheme } from "./themes";
-import { SUPPORTER_INK, drawLogoMark, supporterGradient } from "./logo";
+import {
+  MARK_ASPECT,
+  SUPPORTER_INK,
+  drawLogoMark,
+  supporterGradient,
+} from "./logo";
 
 export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
@@ -420,21 +425,23 @@ export function drawFormula(
 
   ctx.textBaseline = "middle";
   if (config.showWatermark) {
-    const markSize = 20 * base;
-    const markY = headerY - markSize / 2;
+    const markWidth = 30 * base;
+    const markHeight = markWidth / MARK_ASPECT;
+    const markY = headerY - markHeight / 2;
     const premium = config.premiumLogo;
     drawLogoMark(
       ctx,
       marginX,
       markY,
-      markSize,
-      premium ? supporterGradient(ctx, marginX, markY, markSize) : theme.accent,
-      theme.onAccent,
+      markWidth,
+      premium
+        ? supporterGradient(ctx, marginX, markY, markWidth, markHeight)
+        : undefined,
     );
     ctx.textAlign = "left";
     ctx.fillStyle = premium ? SUPPORTER_INK : theme.brand;
     ctx.font = font(normalWeight, 13 * base, fontStack);
-    const wordX = marginX + markSize + 8 * base;
+    const wordX = marginX + markWidth + 9 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
     if (premium) {
       const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);

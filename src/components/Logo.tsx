@@ -1,36 +1,36 @@
-import { MARK_GRID, MARK_PATHS } from "@/lib/logo";
+import { useId } from "react";
+import {
+  BRAND_FROM,
+  BRAND_TO,
+  MARK_BARS,
+  MARK_HEIGHT,
+  MARK_WIDTH,
+} from "@/lib/logo";
 
 export function LogoMark({
-  size = 32,
+  width = 37,
   className = "",
 }: {
-  size?: number;
+  width?: number;
   className?: string;
 }) {
+  const gradientId = useId();
   return (
     <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${MARK_GRID} ${MARK_GRID}`}
+      width={width}
+      height={(width * MARK_HEIGHT) / MARK_WIDTH}
+      viewBox={`0 0 ${MARK_WIDTH} ${MARK_HEIGHT}`}
       className={className}
       aria-hidden
     >
-      <rect
-        width={MARK_GRID}
-        height={MARK_GRID}
-        rx={MARK_PATHS.radius}
-        fill="currentColor"
-      />
-      {MARK_PATHS.bars.map((bar) => (
-        <rect
-          key={bar.y}
-          x={bar.x}
-          y={bar.y}
-          width={MARK_PATHS.barWidth}
-          height={MARK_PATHS.barHeight}
-          rx={MARK_PATHS.barHeight / 2}
-          className="fill-white"
-        />
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor={BRAND_FROM} />
+          <stop offset="1" stopColor={BRAND_TO} />
+        </linearGradient>
+      </defs>
+      {MARK_BARS.map((points) => (
+        <polygon key={points} points={points} fill={`url(#${gradientId})`} />
       ))}
     </svg>
   );
@@ -39,7 +39,7 @@ export function LogoMark({
 export function Logo({ className = "" }: { className?: string }) {
   return (
     <span className={`flex items-center gap-2.5 ${className}`}>
-      <LogoMark size={30} className="text-accent" />
+      <LogoMark width={30} />
       <span className="text-[15px] font-semibold tracking-tight text-fg">
         ことばの方程式
       </span>

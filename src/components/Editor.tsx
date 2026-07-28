@@ -379,7 +379,7 @@ export default function Editor() {
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
-            placeholder="例：体感の暑さ"
+            placeholder="例：伝えたい結論"
             limit={LIMITS.resultText}
           />
         </Section>
@@ -420,7 +420,7 @@ export default function Editor() {
             )}
           </div>
           <p className="mt-2 text-[11px] leading-snug text-faint">
-            「暑さ＝気温×湿度」のような式も、「思い出＞お金」のような比較も作れます。
+            「A ＝ B × C」のような等式も、「A ＞ B」のような比較も作れます。
           </p>
         </Section>
 
@@ -474,7 +474,7 @@ export default function Editor() {
                   <input
                     type="text"
                     value={element.text}
-                    placeholder={index === 0 ? "例：気温" : "例：湿度"}
+                    placeholder={`例：要素${index + 1}`}
                     maxLength={LIMITS.element}
                     onChange={(e) =>
                       updateElement(index, { text: e.target.value })
@@ -513,7 +513,7 @@ export default function Editor() {
           <Field
             value={config.subNote}
             onChange={(value) => update({ subNote: value })}
-            placeholder={"例：※同じ気温でも、湿度が高いほどつらい。\n長い文章も自動で折り返します。"}
+            placeholder={"例：※式の意味や注釈を一言で。\n長い文章も自動で折り返します。"}
             limit={LIMITS.subNote}
             multiline
           />
@@ -523,7 +523,7 @@ export default function Editor() {
           <Field
             value={config.hashtags}
             onChange={(value) => update({ hashtags: value })}
-            placeholder="例：#ことばの方程式 #思考の整理"
+            placeholder="例：#ことばの方程式 #タグ"
             limit={LIMITS.hashtags}
           />
           <p className="mt-1 text-[11px] leading-snug text-faint">

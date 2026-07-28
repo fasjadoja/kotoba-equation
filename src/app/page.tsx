@@ -79,7 +79,7 @@ export default function Home() {
             <span className="relative whitespace-nowrap">
               方程式
               <span
-                className="absolute inset-x-0 bottom-0.5 -z-10 h-2.5 rounded-sm bg-accent/15"
+                className="absolute inset-x-0 bottom-0.5 -z-10 h-2.5 rounded-sm bg-gradient-to-r from-[#74B2FF]/30 to-[#8C65FF]/30"
                 aria-hidden
               />
             </span>

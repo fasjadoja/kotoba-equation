@@ -5,10 +5,8 @@ export type Theme = {
   frame: string;
   /** Wordmark text next to the logo mark. */
   brand: string;
-  /** Logo mark fill and any brand-colored detail. */
+  /** Brand-colored detail such as the relation glyph. */
   accent: string;
-  /** Glyph drawn inside the logo mark. */
-  onAccent: string;
   /** Dot grid printed behind the composition. */
   grid: string;
   title: string;
@@ -29,7 +27,6 @@ export const THEMES: Theme[] = [
     frame: "#E5E9EE",
     brand: "#98A2AE",
     accent: "#0B6BCB",
-    onAccent: "#FFFFFF",
     grid: "#ECEFF4",
     title: "#131820",
     element: "#131820",
@@ -46,7 +43,6 @@ export const THEMES: Theme[] = [
     frame: "#DFE4EB",
     brand: "#8C94A0",
     accent: "#0B6BCB",
-    onAccent: "#FFFFFF",
     grid: "#E6EAF0",
     title: "#151B23",
     element: "#151B23",
@@ -63,7 +59,6 @@ export const THEMES: Theme[] = [
     frame: "#2A3242",
     brand: "#7E8896",
     accent: "#4B9BFF",
-    onAccent: "#0C1220",
     grid: "#1A2130",
     title: "#F2F4F8",
     element: "#F2F4F8",

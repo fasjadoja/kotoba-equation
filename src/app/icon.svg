@@ -1,5 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <rect width="32" height="32" rx="9" fill="#0B6BCB" />
-  <rect x="6.5" y="11" width="13" height="3.6" rx="1.8" fill="#FFFFFF" />
-  <rect x="12.5" y="17.4" width="13" height="3.6" rx="1.8" fill="#FFFFFF" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 37 37" width="37" height="37">
+  <defs>
+    <linearGradient id="mark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#74B2FF" />
+      <stop offset="1" stop-color="#8C65FF" />
+    </linearGradient>
+  </defs>
+  <g transform="translate(0 12.5)" fill="url(#mark)">
+    <polygon points="8.8,0 37,0 33.6,4.7 5.4,4.7" />
+    <polygon points="3.4,7.3 31.6,7.3 28.2,12 0,12" />
+  </g>
 </svg>

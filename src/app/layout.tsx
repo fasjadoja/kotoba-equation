@@ -58,7 +58,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <footer className="mt-14 border-t border-line bg-panel/80 py-7 backdrop-blur">
           <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 px-4 text-[11px] text-faint">
             <span className="flex items-center gap-2 text-[11px] font-medium text-muted">
-              <LogoMark size={18} className="text-accent" />
+              <LogoMark width={26} />
               ことばの方程式
             </span>
             <Link href="/legal/terms" className="transition hover:text-fg">

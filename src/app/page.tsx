@@ -6,7 +6,10 @@ import { donateButtonClass } from "@/components/DonateButton";
 import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
 import {
   DONATE_ANCHOR,
+  DONATE_CUSTOM_URL,
   DONATE_ENABLED,
+  DONATE_MAX,
+  DONATE_MIN,
   DONATE_SUGGESTED,
   DONATE_TIERS,
   SITE,
@@ -22,7 +25,7 @@ const POINTS = [
   {
     icon: <ShieldIcon size={17} />,
     title: "入力はこの端末だけ",
-    body: "画像の生成も履歴もブラウザ内で完結。公開を選んだときだけ共有されます。",
+    body: "画像の生成も履歴もブラウザ内で完結。入力した内容はどこにも送られません。",
   },
   {
     icon: <FreeIcon size={17} />,
@@ -70,7 +73,7 @@ const FAQ = [
   },
   {
     q: "入力した内容はサーバーに送られますか？",
-    a: "送られません。画像の生成も履歴の保存もブラウザ内で完結します。例外は「みんなの作品に載せる」にチェックしたときだけで、その場合に限り式の文字が公開ギャラリーに保存されます。",
+    a: "送られません。画像の生成も履歴の保存もブラウザ内で完結します。入力した文字がサーバーに保存されることはありません。",
   },
 ];
 
@@ -202,7 +205,7 @@ export default function Home() {
             <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
               広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
             </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
               {DONATE_TIERS.map((tier) => (
                 <a
                   key={tier.amount}
@@ -225,6 +228,16 @@ export default function Home() {
                 </a>
               ))}
             </div>
+            {DONATE_CUSTOM_URL && (
+              <a
+                href={DONATE_CUSTOM_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-2 inline-flex w-full items-center justify-center rounded-full border-[1.5px] border-dashed border-control px-5 py-3 text-[13px] font-semibold text-fg transition hover:border-coffeeDark hover:bg-coffee/10 sm:w-auto"
+              >
+                自分で金額を決める（{DONATE_MIN}円〜{DONATE_MAX.toLocaleString("ja-JP")}円）
+              </a>
+            )}
             <p className="mt-3 text-[11px] leading-relaxed text-faint">
               決済はStripeのページで行われ、カード番号はこのサイトには届きません。支払い後にこのサイトへ戻ると、24時間だけ画像のロゴがゴールドになります。
             </p>

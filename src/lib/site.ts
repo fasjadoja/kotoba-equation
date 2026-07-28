@@ -13,6 +13,8 @@ export type DonateTier = {
 
 /** Stripe Payment Link ごとの金額。URLが未設定の金額は表示しません。 */
 const DONATE_LINKS: [number, string, string | undefined][] = [
+  [50, "気持ちだけ", process.env.NEXT_PUBLIC_DONATE_URL_50],
+  [100, "ちょっと応援", process.env.NEXT_PUBLIC_DONATE_URL_100],
   [300, "ひとこと分の応援", process.env.NEXT_PUBLIC_DONATE_URL_300],
   [
     500,
@@ -20,9 +22,15 @@ const DONATE_LINKS: [number, string, string | undefined][] = [
     process.env.NEXT_PUBLIC_DONATE_URL ??
       "https://donate.stripe.com/dRm14o0cb0y92TQ9ones000?locale=ja",
   ],
-  [1000, "しっかり応援", process.env.NEXT_PUBLIC_DONATE_URL_1000],
-  [3000, "サーバー代の足しに", process.env.NEXT_PUBLIC_DONATE_URL_3000],
 ];
+
+/** Pay-what-you-want の Payment Link。金額はStripeのページで入力します。 */
+export const DONATE_CUSTOM_URL = process.env.NEXT_PUBLIC_DONATE_URL_CUSTOM ?? "";
+
+/** Bounds configured on the custom-amount payment link. Stripe will not charge
+ *  less than ¥50 per payment, so that is the floor. */
+export const DONATE_MIN = 50;
+export const DONATE_MAX = 100000;
 
 export const DONATE_TIERS: DonateTier[] = DONATE_LINKS.filter(
   (tier): tier is [number, string, string] => Boolean(tier[2]),
@@ -34,7 +42,7 @@ export const DONATE_SUGGESTED = 500;
 /** Anchor used by the header and footer buttons. */
 export const DONATE_ANCHOR = "donate";
 
-export const DONATE_ENABLED = DONATE_TIERS.length > 0;
+export const DONATE_ENABLED = DONATE_TIERS.length > 0 || !!DONATE_CUSTOM_URL;
 
 /** Official accounts. Listed in the page's JSON-LD so search engines can tell
  *  this brand apart from look-alike sites. */

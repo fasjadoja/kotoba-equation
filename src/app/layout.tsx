@@ -92,7 +92,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             )}
             {DONATE_ENABLED && (
               <a href={`/#${DONATE_ANCHOR}`} className="transition hover:text-fg">
-                寄付する
+                チップを送る
               </a>
             )}
             <span className="ml-auto">

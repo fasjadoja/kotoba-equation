@@ -64,7 +64,7 @@ const USES = [
 const FAQ = [
   {
     q: "無料で使えますか？",
-    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の寄付だけで運営しています。",
+    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意のチップだけで運営しています。",
   },
   {
     q: "作った画像は商用利用できますか？",
@@ -301,9 +301,9 @@ export default function Home() {
             id={DONATE_ANCHOR}
             className="scroll-mt-20 rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8"
           >
-            <h2 className="text-[15px] font-semibold text-fg">このサイトに寄付する</h2>
+            <h2 className="text-[15px] font-semibold text-fg">このサイトにチップを送る</h2>
             <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-              広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
+              広告も、ログインも、有料プランもありません。運営費はチップだけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
             </p>
             <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
               {DONATE_TIERS.map((tier) => (
@@ -354,7 +354,7 @@ export default function Home() {
               </p>
             )}
             <p className="mt-3 text-[11px] leading-relaxed text-faint">
-              決済はStripeのページで行われ、カード番号はこのサイトには届きません。寄付は任意で、しなくてもすべての機能を制限なく使えます。
+              決済はStripeのページで行われ、カード番号はこのサイトには届きません。チップは任意で、送らなくてもすべての機能を制限なく使えます。
             </p>
           </section>
           </Reveal>

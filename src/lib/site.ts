@@ -31,7 +31,7 @@ const DONATE_LINKS: [number, string, string | undefined, UnlockRank][] = [
   ],
   [
     300,
-    "ひとこと分の応援",
+    "このサイトを応援",
     process.env.NEXT_PUBLIC_DONATE_URL_300 ??
       "https://buy.stripe.com/fZu9AUf7580B6622ZZes003?locale=ja",
     "supporter",
@@ -70,7 +70,7 @@ export const DONATE_TIERS: DonateTier[] = DONATE_LINKS.filter(
 ).map(([amount, note, url, rank]) => ({ amount, note, url, rank }));
 
 /** Amount highlighted as the default choice. */
-export const DONATE_SUGGESTED = 500;
+export const DONATE_SUGGESTED = 300;
 
 /** Anchor used by the header and footer buttons. */
 export const DONATE_ANCHOR = "donate";

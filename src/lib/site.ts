@@ -34,7 +34,7 @@ const DONATE_LINKS: [number, string, string | undefined, UnlockRank][] = [
     "このサイトを応援",
     process.env.NEXT_PUBLIC_DONATE_URL_300 ??
       "https://buy.stripe.com/fZu9AUf7580B6622ZZes003?locale=ja",
-    "supporter",
+    "premium",
   ],
   [
     500,
@@ -43,14 +43,16 @@ const DONATE_LINKS: [number, string, string | undefined, UnlockRank][] = [
       "https://donate.stripe.com/dRm14o0cb0y92TQ9ones000?locale=ja",
     "premium",
   ],
-  [
-    10000,
-    "このサイトを支える",
-    process.env.NEXT_PUBLIC_DONATE_URL_10000 ??
-      "https://buy.stripe.com/4gMaEY1gfdkV9ie6cbes005?locale=ja",
-    "elite",
-  ],
 ];
+
+/** Kept off the amount row: next to ¥50–¥500 it reads as a price tag rather
+ *  than a tip, so it sits in the fine print for the few who want it. */
+export const DONATE_LARGE = {
+  amount: 10000,
+  url:
+    process.env.NEXT_PUBLIC_DONATE_URL_10000 ??
+    "https://buy.stripe.com/4gMaEY1gfdkV9ie6cbes005?locale=ja",
+};
 
 /** 金額をStripeの決済ページで選ぶリンク。50円の個数で金額が決まります。 */
 export const DONATE_CUSTOM_URL =
@@ -130,7 +132,7 @@ export function unlockDays(rank: UnlockRank): number {
 /** Amount that unlocks each rank, used for the copy on the donation section. */
 export const UNLOCK_THRESHOLDS: Record<UnlockRank, number> = {
   supporter: 50,
-  premium: 500,
+  premium: 300,
   elite: 10000,
 };
 

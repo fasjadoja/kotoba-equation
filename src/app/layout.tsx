@@ -39,6 +39,15 @@ export const metadata: Metadata = {
     images: ["/og.png"],
   },
   alternates: { canonical: SITE.url },
+  // Set NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION to the token Search Console gives
+  // for the "HTML tag" method; without it no meta tag is emitted.
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? {
+        verification: {
+          google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION,
+        },
+      }
+    : {}),
 };
 
 export const viewport: Viewport = {

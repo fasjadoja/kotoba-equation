@@ -1,7 +1,12 @@
 import type { Metadata } from "next";
 import LegalPage from "../LegalPage";
+import { SITE } from "@/lib/site";
 
-export const metadata: Metadata = { title: "利用規約" };
+export const metadata: Metadata = {
+  title: "利用規約",
+  description: "「ことばの方程式」の利用規約です。作った画像の権利、禁止事項、知的財産について。",
+  alternates: { canonical: `${SITE.url}/legal/terms` },
+};
 
 const SECTIONS = [
   {

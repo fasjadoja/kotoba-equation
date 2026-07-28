@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { DONATE_ANCHOR, DONATE_ENABLED, SITE, SOCIAL } from "@/lib/site";
 import { LogoMark } from "@/components/Logo";
@@ -99,6 +100,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </span>
           </div>
         </footer>
+        {/* Page counts only: no cookies and no per-visitor identifier, so the
+            privacy page stays accurate. */}
+        <Analytics />
       </body>
     </html>
   );

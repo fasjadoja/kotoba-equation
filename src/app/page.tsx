@@ -10,6 +10,7 @@ import {
   DONATE_ENABLED,
   DONATE_MAX,
   DONATE_MIN,
+  DONATE_STEP,
   DONATE_SUGGESTED,
   DONATE_TIERS,
   SITE,
@@ -237,6 +238,11 @@ export default function Home() {
               >
                 自分で金額を決める（{DONATE_MIN}円〜{DONATE_MAX.toLocaleString("ja-JP")}円）
               </a>
+            )}
+            {DONATE_CUSTOM_URL && (
+              <p className="mt-2 text-[11px] leading-relaxed text-faint">
+                金額はStripeの決済ページで、{DONATE_STEP}円の個数を変えて決められます（例：個数20で{(DONATE_STEP * 20).toLocaleString("ja-JP")}円）。
+              </p>
             )}
             <p className="mt-3 text-[11px] leading-relaxed text-faint">
               決済はStripeのページで行われ、カード番号はこのサイトには届きません。支払い後にこのサイトへ戻ると、24時間だけ画像のロゴがゴールドになります。

@@ -13,24 +13,44 @@ export type DonateTier = {
 
 /** Stripe Payment Link ごとの金額。URLが未設定の金額は表示しません。 */
 const DONATE_LINKS: [number, string, string | undefined][] = [
-  [50, "気持ちだけ", process.env.NEXT_PUBLIC_DONATE_URL_50],
-  [100, "ちょっと応援", process.env.NEXT_PUBLIC_DONATE_URL_100],
-  [300, "ひとこと分の応援", process.env.NEXT_PUBLIC_DONATE_URL_300],
+  [
+    50,
+    "気持ちだけ",
+    process.env.NEXT_PUBLIC_DONATE_URL_50 ??
+      "https://buy.stripe.com/3cI00k1gfa8JcuqfMLes001",
+  ],
+  [
+    100,
+    "ちょっと応援",
+    process.env.NEXT_PUBLIC_DONATE_URL_100 ??
+      "https://buy.stripe.com/dRmeVe3on1Cd0LIdEDes002",
+  ],
+  [
+    300,
+    "ひとこと分の応援",
+    process.env.NEXT_PUBLIC_DONATE_URL_300 ??
+      "https://buy.stripe.com/fZu9AUf7580B6622ZZes003",
+  ],
   [
     500,
-    "コーヒー1杯",
+    "しっかり応援",
     process.env.NEXT_PUBLIC_DONATE_URL ??
       "https://donate.stripe.com/dRm14o0cb0y92TQ9ones000?locale=ja",
   ],
 ];
 
-/** Pay-what-you-want の Payment Link。金額はStripeのページで入力します。 */
-export const DONATE_CUSTOM_URL = process.env.NEXT_PUBLIC_DONATE_URL_CUSTOM ?? "";
+/** 金額をStripeの決済ページで選ぶリンク。50円の個数で金額が決まります。 */
+export const DONATE_CUSTOM_URL =
+  process.env.NEXT_PUBLIC_DONATE_URL_CUSTOM ??
+  "https://buy.stripe.com/14AfZi0cb2GhdyueIHes004";
 
 /** Bounds configured on the custom-amount payment link. Stripe will not charge
- *  less than ¥50 per payment, so that is the floor. */
+ *  less than ¥50 per payment, so that is the floor, and the link is capped at
+ *  2,000 units of ¥50. */
 export const DONATE_MIN = 50;
 export const DONATE_MAX = 100000;
+/** The custom link charges ¥50 per unit, so amounts move in ¥50 steps. */
+export const DONATE_STEP = 50;
 
 export const DONATE_TIERS: DonateTier[] = DONATE_LINKS.filter(
   (tier): tier is [number, string, string] => Boolean(tier[2]),

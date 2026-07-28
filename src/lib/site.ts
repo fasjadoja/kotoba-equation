@@ -17,19 +17,19 @@ const DONATE_LINKS: [number, string, string | undefined][] = [
     50,
     "気持ちだけ",
     process.env.NEXT_PUBLIC_DONATE_URL_50 ??
-      "https://buy.stripe.com/3cI00k1gfa8JcuqfMLes001",
+      "https://buy.stripe.com/3cI00k1gfa8JcuqfMLes001?locale=ja",
   ],
   [
     100,
     "ちょっと応援",
     process.env.NEXT_PUBLIC_DONATE_URL_100 ??
-      "https://buy.stripe.com/dRmeVe3on1Cd0LIdEDes002",
+      "https://buy.stripe.com/dRmeVe3on1Cd0LIdEDes002?locale=ja",
   ],
   [
     300,
     "ひとこと分の応援",
     process.env.NEXT_PUBLIC_DONATE_URL_300 ??
-      "https://buy.stripe.com/fZu9AUf7580B6622ZZes003",
+      "https://buy.stripe.com/fZu9AUf7580B6622ZZes003?locale=ja",
   ],
   [
     500,
@@ -42,7 +42,7 @@ const DONATE_LINKS: [number, string, string | undefined][] = [
 /** 金額をStripeの決済ページで選ぶリンク。50円の個数で金額が決まります。 */
 export const DONATE_CUSTOM_URL =
   process.env.NEXT_PUBLIC_DONATE_URL_CUSTOM ??
-  "https://buy.stripe.com/14AfZi0cb2GhdyueIHes004";
+  "https://buy.stripe.com/14AfZi0cb2GhdyueIHes004?locale=ja";
 
 /** Bounds configured on the custom-amount payment link. Stripe will not charge
  *  less than ¥50 per payment, so that is the floor, and the link is capped at

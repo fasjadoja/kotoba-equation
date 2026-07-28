@@ -919,66 +919,14 @@ export default function Editor() {
           </Hint>
         </Section>
 
-        <div className="space-y-2 p-3.5">
-          {/* Copying straight into a post is the most common finish, so it leads;
-              X only opens a compose window, so it sits last. */}
-          {canCopy && (
-            <button
-              onClick={() => void handleCopy()}
-              className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
-            >
-              <CopyIcon size={15} />
-              画像をコピー
-            </button>
-          )}
-          <button
-            onClick={() => void handleDownload()}
-            className={
-              canCopy
-                ? `${secondaryButtonClass} w-full`
-                : `${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`
-            }
-          >
-            <SaveIcon size={15} />
-            {saveLabel}
+        <div className="flex items-center justify-between gap-2 p-3.5">
+          <p className="text-[11px] leading-snug text-faint">
+            入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
+          </p>
+          <button onClick={resetAll} className={`${resetButtonClass} shrink-0`}>
+            <TrashIcon size={13} />
+            リセット
           </button>
-          <button
-            onClick={() => void handleShare()}
-            className={`${quietButtonClass} w-full`}
-          >
-            <XIcon size={14} />
-            画像を保存して X でシェア
-          </button>
-          <div aria-live="polite" className="min-h-[28px]">
-            {status && (
-              <p
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${
-                  status.tone === "ok"
-                    ? "bg-accent/8 text-accent"
-                    : "bg-danger/8 text-danger"
-                }`}
-              >
-                {status.tone === "ok" ? (
-                  <CheckIcon size={13} />
-                ) : (
-                  <AlertIcon size={13} />
-                )}
-                <span className="min-w-0">{status.text}</span>
-              </p>
-            )}
-          </div>
-          <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
-            <p className="text-[11px] leading-snug text-faint">
-              入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
-            </p>
-            <button
-              onClick={resetAll}
-              className={`${resetButtonClass} shrink-0`}
-            >
-              <TrashIcon size={13} />
-              リセット
-            </button>
-          </div>
         </div>
       </div>
 
@@ -1265,6 +1213,68 @@ export default function Editor() {
             )}
           </Section>
 
+        </div>
+      </div>
+
+      {/* The last step of the whole tool, so it sits after every setting
+          instead of in the middle of the form. */}
+      <div className="order-4 min-w-0 lg:col-span-2 lg:row-start-3">
+        <div className="rounded-2xl border border-line bg-panel shadow-card">
+          <Section
+            index="⑧"
+            icon={<SaveIcon size={14} />}
+            label="できた画像を使う"
+          >
+            {/* Copying straight into a post is the most common finish, so it
+                leads; X only opens a compose window, so it sits last. */}
+            <div className="grid gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
+              {canCopy && (
+                <button
+                  onClick={() => void handleCopy()}
+                  className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
+                >
+                  <CopyIcon size={15} />
+                  画像をコピー
+                </button>
+              )}
+              <button
+                onClick={() => void handleDownload()}
+                className={
+                  canCopy
+                    ? `${secondaryButtonClass} w-full`
+                    : `${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`
+                }
+              >
+                <SaveIcon size={15} />
+                {saveLabel}
+              </button>
+              <button
+                onClick={() => void handleShare()}
+                className={`${quietButtonClass} w-full`}
+              >
+                <XIcon size={14} />
+                X でシェア
+              </button>
+            </div>
+            <div aria-live="polite" className="min-h-[28px]">
+              {status && (
+                <p
+                  className={`mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${
+                    status.tone === "ok"
+                      ? "bg-accent/8 text-accent"
+                      : "bg-danger/8 text-danger"
+                  }`}
+                >
+                  {status.tone === "ok" ? (
+                    <CheckIcon size={13} />
+                  ) : (
+                    <AlertIcon size={13} />
+                  )}
+                  <span className="min-w-0">{status.text}</span>
+                </p>
+              )}
+            </div>
+          </Section>
         </div>
       </div>
       </div>

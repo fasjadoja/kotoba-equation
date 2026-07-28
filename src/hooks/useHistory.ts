@@ -66,7 +66,7 @@ function read(): HistoryEntry[] {
 
 function summarize(entry: HistoryEntry): string {
   return `${entry.resultText}${entry.relation || "＝"}${entry.elements
-    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+    .map((element) => `${element.op}${element.text}`)
     .join("")}`;
 }
 

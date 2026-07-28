@@ -459,9 +459,7 @@ export default function Editor() {
 
   const formulaText = () =>
     config.elements
-      .map((element, index) =>
-        index === 0 ? element.text : `${element.op} ${element.text}`,
-      )
+      .map((element) => (element.op ? `${element.op} ${element.text}` : element.text))
       .join(" ");
 
   const handleDownload = async () => {
@@ -631,7 +629,7 @@ export default function Editor() {
                 key={preset.id}
                 onClick={() => applyPreset(preset)}
                 title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
-                  .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+                  .map((element) => `${element.op}${element.text}`)
                   .join("")}`}
                 className={chipClass}
               >

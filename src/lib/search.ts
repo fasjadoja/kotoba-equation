@@ -130,13 +130,13 @@ export type SearchHit =
 
 export function presetText(preset: Preset): string {
   return `${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
-    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+    .map((element) => `${element.op}${element.text}`)
     .join("")}`;
 }
 
 export function entryText(entry: HistoryEntry): string {
   return `${entry.resultText} ${entry.relation || "＝"} ${entry.elements
-    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+    .map((element) => `${element.op}${element.text}`)
     .join("")}`;
 }
 

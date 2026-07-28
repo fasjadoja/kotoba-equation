@@ -8,6 +8,12 @@ export const SITE = {
   contactUrl: process.env.NEXT_PUBLIC_CONTACT_URL ?? "",
 };
 
+/** Official accounts. Listed in the page's JSON-LD so search engines can tell
+ *  this brand apart from look-alike sites. */
+export const SOCIAL = {
+  tiktok: process.env.NEXT_PUBLIC_TIKTOK_URL ?? "",
+};
+
 export const SHARE_HASHTAGS = ["ことばの方程式"];
 
 /**

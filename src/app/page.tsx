@@ -1,9 +1,10 @@
+import Link from "next/link";
 import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
 import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
 import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
-import { SITE } from "@/lib/site";
+import { SITE, SOCIAL } from "@/lib/site";
 
 const POINTS = [
   {
@@ -49,6 +50,10 @@ const FAQ = [
     a: "迷ったら既定の 4:5（1080×1350）のままで OK です。スマホのタイムラインで大きく表示され、X でも Instagram でもそのまま使えます。ストーリーや TikTok なら 9:16、ブログなら 16:9 にあとから変えられます。",
   },
   {
+    q: "なぜ「数式」ではなく「方程式」なのですか？",
+    a: "数学の言葉では、未知数を解く式が「方程式」で、ここで作るのはどちらかというと「数式」に近いものです。ただ日本語の「成功の方程式」のように、方程式には“物事の成り立ちを表す式”という意味が定着しているため、この名前にしています。",
+  },
+  {
     q: "テンプレートは変わりますか？",
     a: "「今日のテンプレート」は10件ずつ表示され、1日に1回入れ替わります。候補は2,000通り以上あり、「別の10件」を押せばその場で別の候補を見られます。",
   },
@@ -71,6 +76,15 @@ export default function Home() {
         offers: { "@type": "Offer", price: "0", priceCurrency: "JPY" },
         description:
           "「元気＝睡眠＋ごはん＋日光」「今日＞昨日」のようなことばの方程式を無料で画像にできるツール。スマホ投稿向けの 4:5 を既定に、Instagram・X・TikTok にも対応。",
+        publisher: { "@id": `${SITE.url}/#brand` },
+      },
+      {
+        "@type": "Brand",
+        "@id": `${SITE.url}/#brand`,
+        name: SITE.name,
+        url: SITE.url,
+        logo: `${SITE.url}/icon.svg`,
+        ...(SOCIAL.tiktok ? { sameAs: [SOCIAL.tiktok] } : {}),
       },
       {
         "@type": "FAQPage",
@@ -141,6 +155,14 @@ export default function Home() {
               </li>
             ))}
           </ul>
+          <p className="mt-2 text-center">
+            <Link
+              href="/about"
+              className="text-[11px] font-medium text-muted transition hover:text-accent"
+            >
+              名前の由来と運営の方針 →
+            </Link>
+          </p>
         </details>
 
         <Editor />

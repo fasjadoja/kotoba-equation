@@ -6,6 +6,7 @@ import {
   type FormulaConfig,
   type FormulaElement,
 } from "./types";
+import { SITE } from "./site";
 import { getTheme } from "./themes";
 import {
   MARK_ASPECT,
@@ -18,6 +19,9 @@ export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
 
 export const WORDMARK = "ことばの方程式";
+
+/** Printed after the wordmark so a reposted image still names where it came from. */
+export const SITE_LABEL = SITE.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const NO_LINE_START = new Set(
   "、。，．・：；！？）】』」〉》”’ゝゞーぁぃぅぇぉっゃゅょゎヵヶァィゥェォッャュョヮ!?),.:;]}".split(
@@ -443,17 +447,16 @@ export function drawFormula(
     ctx.font = font(normalWeight, 13 * base, fontStack);
     const wordX = marginX + markWidth + 9 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
-    if (premium) {
-      const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
-      ctx.font = font(normalWeight, 9.5 * base, fontStack);
-      fillTracked(
-        ctx,
-        "✦ SUPPORTER",
-        wordX + wordWidth + 9 * base,
-        headerY,
-        1.6 * base,
-      );
-    }
+    const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
+    ctx.font = font(normalWeight, 9.5 * base, fontStack);
+    if (!premium) ctx.fillStyle = theme.hashtag;
+    fillTracked(
+      ctx,
+      premium ? "✦ SUPPORTER" : SITE_LABEL,
+      wordX + wordWidth + 9 * base,
+      headerY,
+      1.6 * base,
+    );
   }
 
   const availableTop = headerY + 34 * base;

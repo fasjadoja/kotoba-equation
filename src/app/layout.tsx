@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { SITE } from "@/lib/site";
+import { SITE, SOCIAL } from "@/lib/site";
 import { LogoMark } from "@/components/Logo";
 import { jpMonoFont, jpSansFont, monoFont, uiFont } from "@/lib/fonts";
 
@@ -61,12 +61,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <LogoMark width={26} />
               ことばの方程式
             </span>
+            <Link href="/about" className="transition hover:text-fg">
+              このサイトについて
+            </Link>
             <Link href="/legal/terms" className="transition hover:text-fg">
               利用規約
             </Link>
             <Link href="/legal/privacy" className="transition hover:text-fg">
               プライバシー
             </Link>
+            {SOCIAL.tiktok && (
+              <a
+                href={SOCIAL.tiktok}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="transition hover:text-fg"
+              >
+                TikTok
+              </a>
+            )}
             {SITE.donateUrl && (
               <a
                 href={SITE.donateUrl}

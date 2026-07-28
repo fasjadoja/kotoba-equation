@@ -34,7 +34,7 @@ import {
   type FormulaConfig,
   type Operator,
 } from "@/lib/types";
-import { SHARE_HASHTAGS } from "@/lib/site";
+import { SHARE_HASHTAGS, SITE } from "@/lib/site";
 import {
   AlertIcon,
   BlocksIcon,
@@ -374,7 +374,9 @@ export default function Editor() {
     }`;
     const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(
       text,
-    )}&hashtags=${encodeURIComponent(shareTags().join(","))}`;
+    )}&hashtags=${encodeURIComponent(shareTags().join(","))}&url=${encodeURIComponent(
+      SITE.url,
+    )}`;
     const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
     const ok = await downloadImage();
     if (!ok) {

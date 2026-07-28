@@ -548,10 +548,23 @@ export function drawFormula(
   const hashtags = hashtagText(config);
   if (hashtags) {
     const room = contentWidth - (creditWidth > 0 ? creditWidth + 24 * base : 0);
+    // The tags read as the caption of the image, so they are set a little
+    // larger than the credit and only shrink back when they run out of room.
+    const hashtagTracking = tracking * 0.6;
+    let hashtagSize = 17.5 * base;
+    ctx.font = font(normalWeight, hashtagSize, fontStack);
+    while (
+      trackedWidth(ctx, hashtags, hashtagTracking) > room &&
+      hashtagSize > footerSize
+    ) {
+      hashtagSize -= 0.4 * base;
+      ctx.font = font(normalWeight, hashtagSize, fontStack);
+    }
     const [firstLine] = wrapText(ctx, hashtags, room);
     const text = firstLine ?? hashtags;
     ctx.fillStyle = theme.hashtag;
-    fillTracked(ctx, text, marginX, footerY, tracking * 0.6);
+    fillTracked(ctx, text, marginX, footerY, hashtagTracking);
+    ctx.font = font(normalWeight, footerSize, fontStack);
   }
 }
 

@@ -59,7 +59,7 @@ function clamp(value: number, min: number, max: number): number {
  * one line. Below it a tall canvas would show a thin ribbon of tiny text, so
  * the stacked layout wins instead.
  */
-const MIN_INLINE_RATIO = 0.032;
+const MIN_INLINE_RATIO = 0.06;
 
 /** Character-level wrapping with basic Japanese kinsoku handling. */
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {

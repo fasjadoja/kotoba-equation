@@ -1,12 +1,13 @@
 import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
+import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
 import { SITE } from "@/lib/site";
 
 const FAQ = [
   {
     q: "無料で使えますか？",
-    a: "はい。すべての機能を無料で、回数制限なく使えます。気に入ったら開発者にコーヒーを1杯おごってください。",
+    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の応援（500円）だけで運営しています。",
   },
   {
     q: "作った画像は商用利用できますか？",
@@ -14,7 +15,7 @@ const FAQ = [
   },
   {
     q: "＝以外の記号は使えますか？",
-    a: "使えます。＞ ＜ ≧ ≦ ≠ ≒ → から選べるので、「思い出＞お金」のような価値観の比較も作れます。好きな記号を1文字だけ直接入力することもできます。",
+    a: "使えます。＞ ＜ ≧ ≦ ≠ ≒ → から選べるので、「今日＞昨日」のような比較も作れます。好きな記号を1文字だけ直接入力することもできます。",
   },
   {
     q: "「1＜2」のような短い式もきれいに作れますか？",
@@ -25,8 +26,12 @@ const FAQ = [
     a: "入れられます。補足は140文字まで、ハッシュタグは画像の左下に入ります。どちらも自動で折り返し・縮小されるのでレイアウトは崩れません。",
   },
   {
-    q: "TikTokやリールにも使えますか？",
-    a: "使えます。9:16（1080×1920）と4:5（1080×1350）の縦サイズに対応しています。",
+    q: "どのサイズで作ればいいですか？",
+    a: "迷ったら既定の 4:5（1080×1350）のままで OK です。スマホのタイムラインで大きく表示され、X でも Instagram でもそのまま使えます。ストーリーや TikTok なら 9:16、ブログなら 16:9 にあとから変えられます。",
+  },
+  {
+    q: "テンプレートは変わりますか？",
+    a: "「今日のテンプレート」は1日に1回入れ替わります。過去の分も含めて、「すべてのテンプレート」からいつでも選べます。",
   },
   {
     q: "入力した内容はサーバーに送られますか？",
@@ -46,7 +51,7 @@ export default function Home() {
         operatingSystem: "Web",
         offers: { "@type": "Offer", price: "0", priceCurrency: "JPY" },
         description:
-          "「暑さ＝気温×湿度」「思い出＞お金」のようなことばの方程式を無料で画像にできるツール。X・note・TikTok向けのサイズに対応。",
+          "「元気＝睡眠＋ごはん＋日光」「今日＞昨日」のようなことばの方程式を無料で画像にできるツール。スマホ投稿向けの 4:5 を既定に、Instagram・X・TikTok にも対応。",
       },
       {
         "@type": "FAQPage",
@@ -86,7 +91,7 @@ export default function Home() {
             にする。
           </h1>
           <p className="mx-auto mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-            「暑さ＝気温×湿度」のような式も、「思い出＞お金」のような比較も、1枚の画像に。
+            「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も、スマホに合うサイズの1枚に。
           </p>
         </div>
 
@@ -108,19 +113,21 @@ export default function Home() {
 
         {SITE.donateUrl && (
           <Reveal className="mt-4" delay={80}>
-          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
-            <p className="max-w-2xl text-[13px] leading-relaxed text-muted">
-              このツールは無料で公開しています。広告も、ログインも、有料プランもありません。
-              続けられるかどうかは、使ってくれた方の気持ち次第です。
-            </p>
+          <section className="flex flex-col gap-5 rounded-2xl border border-line bg-panel p-6 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <div>
+              <h2 className="text-[15px] font-semibold text-fg">このサイトを応援する</h2>
+              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
+                広告も、ログインも、有料プランもありません。続けられるかどうかは、使ってくれた方の気持ち次第です（500円・1回限り）。
+              </p>
+            </div>
             <a
               href={SITE.donateUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-coffee px-4 py-2.5 text-[13px] font-semibold text-[#3B2A12] shadow-[0_2px_10px_rgba(255,169,43,0.35)] transition hover:brightness-105 active:translate-y-px"
+              className={`${donateButtonClass} shrink-0 px-6 py-3.5 text-[14px]`}
             >
-              <span aria-hidden>☕</span>
-              開発者にコーヒーをおごる
+              <CoffeeIcon size={17} />
+              500円で応援する
             </a>
           </section>
           </Reveal>

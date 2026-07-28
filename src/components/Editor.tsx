@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PRESETS, PRESET_CATEGORIES, type Preset } from "@/lib/presets";
+import {
+  DAILY_PRESET_COUNT,
+  PRESETS,
+  PRESET_CATEGORIES,
+  dailyPresets,
+  dayKey,
+  type Preset,
+} from "@/lib/presets";
 import { THEMES } from "@/lib/themes";
 import { CANVAS_FONTS, type CanvasFontId } from "@/lib/fonts";
 import {
@@ -18,10 +25,13 @@ import {
   MARGIN_SCALE,
   MAX_ELEMENTS,
   OPERATORS,
+  OPERATOR_GROUPS,
+  RECOMMENDED_SIZE,
   RELATIONS,
   SIZES,
   TEXT_SCALE,
   getSize,
+  isRecommendedSize,
   type FormulaConfig,
   type Operator,
 } from "@/lib/types";
@@ -100,6 +110,8 @@ export default function Editor() {
   const [justUpdated, setJustUpdated] = useState(false);
   const [makePublic, setMakePublic] = useState(false);
   const [keepHistory, setKeepHistory] = useState(true);
+  const [showSizes, setShowSizes] = useState(false);
+  const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -117,6 +129,12 @@ export default function Editor() {
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
+
+  // Seeded on the browser's calendar day, so the set rotates at local midnight
+  // without making the server and the client render different markup.
+  useEffect(() => {
+    setTodaysPresets(dailyPresets(dayKey(new Date())));
+  }, []);
 
   useEffect(() => {
     setCanCopy(
@@ -385,24 +403,33 @@ export default function Editor() {
         </Section>
 
         <Section index="②" label="関係（左と右をつなぐ記号）">
-          <div className="flex items-center gap-1.5">
-            <select
-              value={customRelation ? CUSTOM_OP : config.relation}
-              onChange={(e) => {
-                const value = e.target.value;
-                setCustomRelation(value === CUSTOM_OP);
-                update({ relation: value === CUSTOM_OP ? "" : value });
+          <div className="flex flex-wrap items-center gap-1.5">
+            {RELATIONS.map((relation) => (
+              <button
+                key={relation}
+                onClick={() => {
+                  setCustomRelation(false);
+                  update({ relation });
+                }}
+                aria-pressed={!customRelation && config.relation === relation}
+                aria-label={`関係記号 ${relation}`}
+                className={symbolChipClass(
+                  !customRelation && config.relation === relation,
+                )}
+              >
+                {relation}
+              </button>
+            ))}
+            <button
+              onClick={() => {
+                setCustomRelation(true);
+                update({ relation: "" });
               }}
-              aria-label="関係記号"
-              className={`${fieldClass} w-[108px] shrink-0 px-2`}
+              aria-pressed={customRelation}
+              className={`${symbolChipClass(customRelation)} w-auto px-3 text-[12px]`}
             >
-              {RELATIONS.map((relation) => (
-                <option key={relation} value={relation}>
-                  {relation}
-                </option>
-              ))}
-              <option value={CUSTOM_OP}>直接入力</option>
-            </select>
+              その他
+            </button>
             {customRelation && (
               <input
                 type="text"
@@ -415,12 +442,12 @@ export default function Editor() {
                     relation: Array.from(e.target.value).slice(-1).join(""),
                   })
                 }
-                className={`${fieldClass} w-[60px] shrink-0 px-2 text-center`}
+                className={`${fieldClass} w-[56px] shrink-0 px-2 text-center`}
               />
             )}
           </div>
           <p className="mt-2 text-[11px] leading-snug text-faint">
-            「A ＝ B × C」のような等式も、「A ＞ B」のような比較も作れます。
+            「A ＝ B × C」のような等式も、「A ＞ B」のような比較も。「その他」を選ぶと好きな記号を1文字入力できます。
           </p>
         </Section>
 
@@ -436,26 +463,39 @@ export default function Editor() {
                 (!!element.op && !isPresetOperator(element.op));
               return (
                 <div key={index} className="flex items-center gap-1.5">
-                  <select
-                    value={custom ? CUSTOM_OP : element.op}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setOperatorMode(index, value === CUSTOM_OP);
-                      updateElement(index, {
-                        op: value === CUSTOM_OP ? "" : value,
-                      });
-                    }}
-                    aria-label={`要素 ${index + 1} の演算子`}
-                    className={`${fieldClass} w-[94px] shrink-0 px-2`}
+                  <span
+                    className="w-4 shrink-0 text-center font-mono text-[11px] text-faint"
+                    aria-hidden
                   >
-                    {index === 0 && <option value="">なし</option>}
-                    {OPERATORS.map((op) => (
-                      <option key={op} value={op}>
-                        {op}
-                      </option>
-                    ))}
-                    <option value={CUSTOM_OP}>直接入力</option>
-                  </select>
+                    {index + 1}
+                  </span>
+                  <div className="relative shrink-0">
+                    <select
+                      value={custom ? CUSTOM_OP : element.op}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        setOperatorMode(index, value === CUSTOM_OP);
+                        updateElement(index, {
+                          op: value === CUSTOM_OP ? "" : value,
+                        });
+                      }}
+                      aria-label={`要素 ${index + 1} の前の記号`}
+                      className={`${fieldClass} w-[74px] appearance-none pl-3 pr-6 text-center text-[15px]`}
+                    >
+                      {index === 0 && <option value="">なし</option>}
+                      {OPERATOR_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.ops.map((op) => (
+                            <option key={op} value={op}>
+                              {op}
+                            </option>
+                          ))}
+                        </optgroup>
+                      ))}
+                      <option value={CUSTOM_OP}>その他…</option>
+                    </select>
+                    <ChevronIcon />
+                  </div>
                   {custom && (
                     <input
                       type="text"
@@ -503,9 +543,9 @@ export default function Editor() {
             </button>
           )}
           <p className="mt-2 text-[11px] leading-snug text-faint">
-            演算子はプルダウンから選べます。一覧にない記号は「直接入力」を選ぶと、1文字だけ自由に入力できます。
+            左のプルダウンが、その要素の前に入る記号です（計算 / 比較 / 括弧 でまとまっています）。一覧にない記号は「その他…」を選ぶと1文字だけ入力できます。
             <br />
-            「（」「）」を選ぶと括弧になります（例：200 ＝（3 ＋ 7）× 20）。括弧を閉じるだけの行は、入力欄を空のままにしてください。
+            「（」「）」で括弧を作れます（例：200 ＝（3 ＋ 7）× 20）。括弧を閉じるだけの行は、入力欄を空のままにしてください。
           </p>
         </Section>
 
@@ -638,28 +678,57 @@ export default function Editor() {
               : "border-line shadow-card"
           }`}
         >
+          {/* One recommended size is enough for most posts, so the rest stay
+              behind a disclosure instead of a row of five choices. */}
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-            <div className="flex flex-wrap gap-1">
-              {SIZES.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => update({ sizeId: item.id })}
-                  aria-pressed={config.sizeId === item.id}
-                  title={item.hint}
-                  className={`rounded-full px-3 py-1.5 text-[12px] font-medium transition ${
-                    config.sizeId === item.id
-                      ? "bg-accent/10 text-accent"
-                      : "text-muted hover:bg-raised hover:text-fg"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              ))}
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="rounded-full bg-accent/10 px-2.5 py-1 text-[12px] font-semibold text-accent">
+                {size.label}
+              </span>
+              <span className="truncate text-[11px] text-muted">
+                {isRecommendedSize(config.sizeId) ? "スマホ投稿の王道サイズ" : size.hint}
+              </span>
             </div>
-            <span className="hidden font-mono text-[11px] text-faint sm:inline">
-              {size.width} × {size.height} / @2x
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="hidden font-mono text-[11px] text-faint sm:inline">
+                {size.width} × {size.height}
+              </span>
+              <button
+                onClick={() => setShowSizes((previous) => !previous)}
+                aria-expanded={showSizes}
+                className="rounded-md border border-edge px-2.5 py-1 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent"
+              >
+                サイズを変える
+              </button>
+            </div>
           </div>
+          {showSizes && (
+            <div className="border-b border-line px-3 py-2">
+              <div className="flex flex-wrap gap-1.5">
+                {SIZES.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => update({ sizeId: item.id })}
+                    aria-pressed={config.sizeId === item.id}
+                    title={item.hint}
+                    className={`rounded-lg border px-3 py-1.5 text-[12px] font-medium transition ${
+                      config.sizeId === item.id
+                        ? "border-accent bg-accent/5 text-accent"
+                        : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
+                    }`}
+                  >
+                    {item.label}
+                    {item.id === RECOMMENDED_SIZE && (
+                      <span className="ml-1.5 text-[10px] text-faint">王道</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] leading-snug text-faint">
+                迷ったら 4:5 のままでOK。ストーリーやTikTokは 9:16、ブログの見出し画像は 16:9 が向いています。
+              </p>
+            </div>
+          )}
           <div className="flex w-full items-center justify-center p-3 sm:p-8">
             <canvas
               ref={canvasRef}
@@ -778,30 +847,50 @@ export default function Editor() {
             </div>
           </Section>
 
-          <Section label="テンプレート（有名な方程式）">
-            <div className="space-y-3">
-              {PRESET_CATEGORIES.map((category) => (
-                <div key={category}>
-                  <p className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-faint">
-                    {category}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESETS.filter((preset) => preset.category === category).map(
-                      (preset) => (
-                        <button
-                          key={preset.id}
-                          onClick={() => applyPreset(preset)}
-                          title={preset.subNote}
-                          className={chipClass}
-                        >
-                          {preset.label}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                </div>
+          <Section label="今日のテンプレート" hint={`${DAILY_PRESET_COUNT}件`}>
+            <p className="mb-1.5 text-[11px] text-faint">
+              1日に1回入れ替わります。クリックすると入力欄に読み込みます。
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {todaysPresets.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset)}
+                  title={preset.subNote}
+                  className={chipClass}
+                >
+                  {preset.label}
+                </button>
               ))}
             </div>
+            <details className="mt-3 group">
+              <summary className="cursor-pointer list-none text-[11px] font-medium text-muted transition hover:text-accent">
+                すべてのテンプレート（{PRESETS.length}件）を見る
+              </summary>
+              <div className="mt-2.5 space-y-3">
+                {PRESET_CATEGORIES.map((category) => (
+                  <div key={category}>
+                    <p className="mb-1.5 text-[10px] font-semibold tracking-[0.06em] text-faint">
+                      {category}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PRESETS.filter((preset) => preset.category === category).map(
+                        (preset) => (
+                          <button
+                            key={preset.id}
+                            onClick={() => applyPreset(preset)}
+                            title={preset.subNote}
+                            className={chipClass}
+                          >
+                            {preset.label}
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </details>
           </Section>
 
           <Section
@@ -886,6 +975,36 @@ const fieldClass =
 
 const chipClass =
   "rounded-md border border-edge bg-panel px-2.5 py-1.5 text-[12px] text-muted transition hover:border-accent/50 hover:text-accent";
+
+/** Square, glyph-first button used for the relation symbols. */
+function symbolChipClass(active: boolean) {
+  return `flex h-10 w-10 items-center justify-center rounded-lg border text-[15px] font-medium transition ${
+    active
+      ? "border-accent bg-accent/5 text-accent"
+      : "border-edge bg-panel text-muted hover:border-accent/50 hover:text-fg"
+  }`;
+}
+
+function ChevronIcon() {
+  return (
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 12 12"
+      fill="none"
+      aria-hidden
+      className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-faint"
+    >
+      <path
+        d="M2.5 4.5 6 8l3.5-3.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function Slider({
   label,

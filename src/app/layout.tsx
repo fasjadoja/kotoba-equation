@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     template: "%s｜ことばの方程式",
   },
   description:
-    "「人生の成果＝能力×熱量×考え方」「思い出＞お金」のようなことばの方程式を、ブラウザだけで画像にできる無料ツール。X・note・Instagram・TikTok（9:16）向けのサイズに対応し、登録不要でPNGを保存できます。",
+    "「元気＝睡眠＋ごはん＋日光」「今日＞昨日」のようなことばの方程式を、ブラウザだけで画像にできる無料ツール。スマホ投稿の王道サイズ（4:5）を既定に、Instagram・X・TikTok（9:16）にも対応。登録不要でPNGを保存できます。",
   keywords: [
     "ことばの方程式",
     "思考式 ジェネレーター",
@@ -29,13 +29,13 @@ export const metadata: Metadata = {
     url: SITE.url,
     siteName: "ことばの方程式",
     title: "ことばの方程式｜思考を方程式の画像にする無料ツール",
-    description: "思考や価値観を1枚の方程式画像に。登録不要・無料。X / note / 縦画面に対応。",
+    description: "思っていることを1枚の方程式画像に。登録不要・無料。スマホ投稿向けのサイズを既定に用意。",
     images: [{ url: "/og.png", width: 1200, height: 675 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "ことばの方程式｜思考を方程式の画像にする無料ツール",
-    description: "思考や価値観を1枚の方程式画像に。登録不要・無料。",
+    description: "思っていることを1枚の方程式画像に。登録不要・無料。",
     images: ["/og.png"],
   },
   alternates: { canonical: SITE.url },
@@ -74,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 rel="noopener noreferrer"
                 className="transition hover:text-fg"
               >
-                Buy me a coffee
+                このサイトを応援する
               </a>
             )}
             <span className="ml-auto">

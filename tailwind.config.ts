@@ -23,7 +23,10 @@ export default {
         accent: "#0B6BCB",
         accentDark: "#08529E",
         danger: "#C2453C",
-        coffee: "#FFA92B",
+        /** donation call to action */
+        coffee: "#FFC13B",
+        coffeeDark: "#F5A700",
+        coffeeInk: "#4A3208",
       },
       fontFamily: {
         sans: [

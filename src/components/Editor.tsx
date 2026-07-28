@@ -150,6 +150,7 @@ export default function Editor() {
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
   const [presetRound, setPresetRound] = useState(0);
   const [query, setQuery] = useState("");
+  const [showLeadOp, setShowLeadOp] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -167,6 +168,8 @@ export default function Editor() {
 
   const hits = useMemo(() => searchAll(entries, query, SEARCH_LIMIT), [entries, query]);
   const searchableCount = useMemo(() => entries.filter(isSearchable).length, [entries]);
+
+  const leadOp = showLeadOp || !!config.elements[0]?.op;
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
@@ -459,8 +462,21 @@ export default function Editor() {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:items-start">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:grid-rows-[min-content_1fr] lg:items-start">
       <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        {/* Starting over is a first move, not a last one, so it sits above the
+            fields instead of below the export buttons. */}
+        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
+          <p className="text-[11px] text-faint">入力（この端末に自動保存）</p>
+          <button
+            onClick={resetAll}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
+          >
+            <RefreshIcon size={13} />
+            入力をリセット
+          </button>
+        </div>
+
         <Section index="①" icon={<TargetIcon size={14} />} label="結果（左側）">
           <Field
             value={config.resultText}
@@ -542,7 +558,9 @@ export default function Editor() {
                   >
                     {index + 1}
                   </span>
-                  <div className="relative shrink-0">
+                  {/* The first element normally has nothing in front of it, so
+                      the picker only appears once a bracket is asked for. */}
+                  <div className={`relative shrink-0 ${index === 0 && !leadOp ? "hidden" : ""}`}>
                     <select
                       value={custom ? CUSTOM_OP : element.op}
                       onChange={(e) => {
@@ -618,8 +636,20 @@ export default function Editor() {
               ? `要素は${MAX_ELEMENTS}つまで`
               : "要素を追加"}
           </button>
+          <button
+            onClick={() => {
+              if (leadOp) {
+                setOperatorMode(0, false);
+                updateElement(0, { op: "" });
+              }
+              setShowLeadOp(!leadOp);
+            }}
+            className="mt-1.5 text-[11px] text-faint transition hover:text-accent"
+          >
+            {leadOp ? "要素1の前の記号をなくす" : "要素1の前にも記号を入れる（括弧など）"}
+          </button>
           <Hint>
-            左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
+            2つ目以降の左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
             <br />
             括弧の例：200 ＝（3 ＋ 7）× 20　※「）」だけの行はことばを空に。
           </Hint>
@@ -693,23 +723,23 @@ export default function Editor() {
           </div>
         </Section>
 
-        <Section index="⑦" icon={<SaveIcon size={14} />} label="保存と公開">
+        <Section
+          index="⑦"
+          icon={<SaveIcon size={14} />}
+          label={gallery.enabled ? "保存と公開" : "履歴に保存"}
+        >
           <div className="space-y-2">
             <Toggle
               checked={keepHistory}
               onChange={setKeepHistory}
               label="この式を履歴に保存する（この端末だけ）"
             />
-            {gallery.enabled ? (
+            {gallery.enabled && (
               <Toggle
                 checked={makePublic}
                 onChange={setMakePublic}
                 label="この式を「みんなの作品」に載せる（公開）"
               />
-            ) : (
-              <p className="text-[11px] leading-snug text-faint">
-                「みんなの作品」への公開は準備中です。公開する式はいつでもご自身で選べます。
-              </p>
             )}
           </div>
           <Hint>
@@ -768,18 +798,9 @@ export default function Editor() {
               </p>
             )}
           </div>
-          <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
-            <p className="text-[11px] leading-snug text-faint">
-              入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
-            </p>
-            <button
-              onClick={resetAll}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
-            >
-              <RefreshIcon size={13} />
-              入力をリセット
-            </button>
-          </div>
+          <p className="border-t border-line pt-2.5 text-[11px] leading-snug text-faint">
+            入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
+          </p>
         </div>
       </div>
 
@@ -920,7 +941,7 @@ export default function Editor() {
                     className={`${choiceClass(config.themeId === theme.id)} flex items-center justify-center gap-2 px-2`}
                   >
                     <span
-                      className="h-2.5 w-2.5 rounded-full border border-edge"
+                      className="h-2.5 w-2.5 rounded-full border border-black/15"
                       style={{ backgroundColor: theme.swatch }}
                     />
                     {theme.name}

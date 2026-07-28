@@ -26,9 +26,9 @@ export default {
         accentDark: "#08529E",
         danger: "#C2453C",
         /** donation call to action */
-        coffee: "#FFC13B",
-        coffeeDark: "#F5A700",
-        coffeeInk: "#4A3208",
+        coffee: "#FFDE47",
+        coffeeDark: "#FFC400",
+        coffeeInk: "#3D2E00",
       },
       fontFamily: {
         sans: [

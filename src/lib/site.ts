@@ -61,9 +61,9 @@ export const DONATE_CUSTOM_URL =
 
 /** Bounds configured on the custom-amount payment link. Stripe will not charge
  *  less than ¥50 per payment, so that is the floor, and the link is capped at
- *  2,000 units of ¥50. */
+ *  600 units of ¥50. */
 export const DONATE_MIN = 50;
-export const DONATE_MAX = 100000;
+export const DONATE_MAX = 30000;
 /** The custom link charges ¥50 per unit, so amounts move in ¥50 steps. */
 export const DONATE_STEP = 50;
 

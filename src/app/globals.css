@@ -37,6 +37,15 @@ textarea {
   font-family: inherit;
 }
 
+/* Rows that scroll sideways on small screens read better without the bar. */
+.scroll-row {
+  scrollbar-width: none;
+}
+
+.scroll-row::-webkit-scrollbar {
+  display: none;
+}
+
 ::selection {
   background-color: rgba(11, 107, 203, 0.16);
 }

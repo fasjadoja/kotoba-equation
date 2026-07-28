@@ -124,6 +124,8 @@ async function ensureFont(config: FormulaConfig) {
   }
 }
 
+type SaveResult = "shared" | "downloaded" | "cancelled" | "failed";
+
 function countOf(value: string) {
   return Array.from(value).length;
 }
@@ -140,6 +142,7 @@ export default function Editor() {
   const [config, setConfig] = useState<FormulaConfig>(DEFAULT_CONFIG);
   const [status, setStatus] = useState<Status | null>(null);
   const [canCopy, setCanCopy] = useState(false);
+  const [canShareFiles, setCanShareFiles] = useState(false);
   const [customOps, setCustomOps] = useState<boolean[]>([]);
   const [customRelation, setCustomRelation] = useState(false);
   const [justUpdated, setJustUpdated] = useState(false);
@@ -172,6 +175,7 @@ export default function Editor() {
   const searchableCount = useMemo(() => entries.filter(isSearchable).length, [entries]);
 
   const leadOp = showLeadOp || !!config.elements[0]?.op;
+  const saveLabel = canShareFiles ? "写真に保存" : "PNGで保存";
 
   const size = useMemo(() => getSize(config.sizeId), [config.sizeId]);
   const renderOptions = RENDER_OPTIONS[config.fontId];
@@ -187,6 +191,14 @@ export default function Editor() {
       typeof window !== "undefined" &&
         typeof window.ClipboardItem !== "undefined" &&
         typeof navigator.clipboard?.write === "function",
+    );
+    setCanShareFiles(
+      typeof navigator !== "undefined" &&
+        typeof navigator.share === "function" &&
+        typeof navigator.canShare === "function" &&
+        navigator.canShare({
+          files: [new File([], "formula.png", { type: "image/png" })],
+        }),
     );
   }, []);
 
@@ -362,16 +374,38 @@ export default function Editor() {
     if (config.logoRank !== "brand") supporter.spend();
   };
 
-  const downloadImage = async () => {
+  const fileName = () => `${config.resultText || "formula"}.png`;
+
+  /**
+   * Phones hide downloaded files inside a file manager, so the share sheet is
+   * used instead: it offers "写真に保存" on iOS and the gallery on Android.
+   */
+  const saveImage = async (allowShare = true): Promise<SaveResult> => {
     await ensureFont(config);
     const blob = await renderToBlob(config, renderOptions);
-    if (!blob) return false;
+    if (!blob) return "failed";
+    const name = fileName();
+    if (allowShare && canShareFiles) {
+      const file = new File([blob], name, { type: "image/png" });
+      if (navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: config.resultText });
+          commit();
+          return "shared";
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return "cancelled";
+          }
+          // Anything else (unsupported target, permission) falls back below.
+        }
+      }
+    }
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     const supportsDownload = "download" in link;
     if (supportsDownload) {
       link.href = url;
-      link.download = `${config.resultText || "formula"}.png`;
+      link.download = name;
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -381,7 +415,7 @@ export default function Editor() {
     }
     window.setTimeout(() => URL.revokeObjectURL(url), 10_000);
     commit();
-    return true;
+    return "downloaded";
   };
 
   const formulaText = () =>
@@ -392,9 +426,10 @@ export default function Editor() {
       .join(" ");
 
   const handleDownload = async () => {
-    const ok = await downloadImage();
-    if (ok) notify("画像を保存しました");
-    else notify("画像を生成できませんでした", "error");
+    const result = await saveImage();
+    if (result === "shared") notify("「画像を保存」を選ぶと写真に入ります");
+    else if (result === "downloaded") notify("画像を保存しました");
+    else if (result === "failed") notify("画像を生成できませんでした", "error");
   };
 
   const shareTags = () => {
@@ -415,7 +450,8 @@ export default function Editor() {
       SITE.url,
     )}`;
     const shareWindow = window.open(url, "_blank", "noopener,noreferrer");
-    const ok = await downloadImage();
+    // X needs the file on the device, so this path always downloads.
+    const ok = (await saveImage(false)) === "downloaded";
     if (!ok) {
       notify("画像を生成できませんでした", "error");
       return;
@@ -904,7 +940,7 @@ export default function Editor() {
             }
           >
             <SaveIcon size={15} />
-            PNGで保存
+            {saveLabel}
           </button>
           <button
             onClick={() => void handleShare()}
@@ -1073,7 +1109,7 @@ export default function Editor() {
                   }
                 >
                   <SaveIcon size={14} />
-                  PNGで保存
+                  {saveLabel}
                 </button>
                 <button
                   onClick={() => setPinActions(false)}
@@ -1239,6 +1275,7 @@ export default function Editor() {
           height={size.height}
           sizeLabel={size.label}
           canCopy={canCopy}
+          saveLabel={saveLabel}
           onCopy={() => void handleCopy()}
           onDownload={() => void handleDownload()}
           onClose={() => setZoomSrc(null)}

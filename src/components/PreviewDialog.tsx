@@ -11,6 +11,7 @@ type Props = {
   height: number;
   sizeLabel: string;
   canCopy: boolean;
+  saveLabel: string;
   onCopy: () => void;
   onDownload: () => void;
   onClose: () => void;
@@ -23,6 +24,7 @@ export default function PreviewDialog({
   height,
   sizeLabel,
   canCopy,
+  saveLabel,
   onCopy,
   onDownload,
   onClose,
@@ -51,7 +53,9 @@ export default function PreviewDialog({
   };
 
   const controlClass =
-    "inline-flex items-center gap-1.5 rounded-md border border-white/25 px-2.5 py-1.5 text-[12px] font-medium text-white/90 transition hover:border-white/60 hover:text-white";
+    "inline-flex shrink-0 items-center gap-1.5 rounded-md border border-white/25 px-2.5 py-1.5 text-[12px] font-medium text-white/90 transition hover:border-white/60 hover:text-white";
+  const closeClass =
+    "inline-flex items-center justify-center gap-1.5 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-fg shadow-lg transition hover:bg-white/90";
 
   return (
     <div
@@ -62,42 +66,45 @@ export default function PreviewDialog({
       onClick={onClose}
     >
       <div
-        className="flex flex-wrap items-center gap-2 px-3 py-2.5 sm:px-5"
+        className="px-3 py-2.5 sm:px-5"
         onClick={(event) => event.stopPropagation()}
       >
-        <span className="mr-auto text-[12px] text-white/70">
-          {sizeLabel}・{width} × {height}px
-          {zoom !== null && `（${Math.round(zoom * 100)}%）`}
-        </span>
-        <button onClick={() => step(-1)} aria-label="縮小" className={controlClass}>
-          <ZoomOutIcon size={14} />
-        </button>
-        <button onClick={() => step(1)} aria-label="拡大" className={controlClass}>
-          <ZoomInIcon size={14} />
-        </button>
-        <button onClick={() => setZoom(null)} className={controlClass}>
-          全体
-        </button>
-        <button onClick={() => setZoom(1)} className={controlClass}>
-          実寸
-        </button>
-        {canCopy && (
-          <button onClick={onCopy} className={controlClass}>
-            <CopyIcon size={14} />
-            コピー
+        {/* The close button keeps its own row so the zoom controls can never
+            push it out of reach on a narrow screen. */}
+        <div className="flex items-center gap-3">
+          <span className="min-w-0 flex-1 truncate text-[12px] text-white/70">
+            {sizeLabel}・{width} × {height}px
+            {zoom !== null && `（${Math.round(zoom * 100)}%）`}
+          </span>
+          <button onClick={onClose} className={closeClass}>
+            <CloseIcon size={15} />
+            閉じる
           </button>
-        )}
-        <button onClick={onDownload} className={controlClass}>
-          <SaveIcon size={14} />
-          PNG
-        </button>
-        <button
-          onClick={onClose}
-          className="inline-flex items-center gap-1.5 rounded-md bg-white/95 px-3 py-1.5 text-[12px] font-semibold text-ink transition hover:bg-white"
-        >
-          <CloseIcon size={14} />
-          閉じる
-        </button>
+        </div>
+        <div className="scroll-row mt-2 flex items-center gap-2 overflow-x-auto pb-0.5">
+          <button onClick={() => step(-1)} aria-label="縮小" className={controlClass}>
+            <ZoomOutIcon size={14} />
+          </button>
+          <button onClick={() => step(1)} aria-label="拡大" className={controlClass}>
+            <ZoomInIcon size={14} />
+          </button>
+          <button onClick={() => setZoom(null)} className={controlClass}>
+            全体
+          </button>
+          <button onClick={() => setZoom(1)} className={controlClass}>
+            実寸
+          </button>
+          {canCopy && (
+            <button onClick={onCopy} className={controlClass}>
+              <CopyIcon size={14} />
+              コピー
+            </button>
+          )}
+          <button onClick={onDownload} className={controlClass}>
+            <SaveIcon size={14} />
+            {saveLabel}
+          </button>
+        </div>
       </div>
 
       <div
@@ -124,9 +131,18 @@ export default function PreviewDialog({
         />
       </div>
 
-      <p className="px-3 pb-3 text-center text-[11px] text-white/50 sm:pb-4">
-        画像をクリックで実寸／全体を切り替え。Esc または背景をクリックで閉じます。
-      </p>
+      <div
+        className="px-3 pb-4 pt-1 text-center sm:pb-5"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <button onClick={onClose} className={`${closeClass} w-full sm:w-auto`}>
+          <CloseIcon size={15} />
+          閉じて編集に戻る
+        </button>
+        <p className="mt-2 text-[11px] text-white/50">
+          画像をタップで実寸／全体を切り替え。Esc または背景をタップしても閉じられます。
+        </p>
+      </div>
     </div>
   );
 }

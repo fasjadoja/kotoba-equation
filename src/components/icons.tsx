@@ -194,6 +194,40 @@ export function FrameIcon(props: IconProps) {
   );
 }
 
+export function ExpandIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M4.5 9.5v-5h5M19.5 14.5v5h-5M14.5 4.5h5v5M9.5 19.5h-5v-5" />
+    </Svg>
+  );
+}
+
+export function CloseIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M6 6l12 12M18 6 6 18" />
+    </Svg>
+  );
+}
+
+export function ZoomInIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M15.8 15.8 20 20M11 8.5v5M8.5 11h5" />
+    </Svg>
+  );
+}
+
+export function ZoomOutIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="M15.8 15.8 20 20M8.5 11h5" />
+    </Svg>
+  );
+}
+
 export function PlusIcon(props: IconProps) {
   return (
     <Svg {...props}>

@@ -43,6 +43,7 @@ import {
   ClockIcon,
   CopyIcon,
   EqualsIcon,
+  ExpandIcon,
   FrameIcon,
   HashIcon,
   InfoIcon,
@@ -68,6 +69,7 @@ import {
   type HistoryEntry,
 } from "@/hooks/useHistory";
 import { isSearchable, searchAll, type SearchHit } from "@/lib/search";
+import PreviewDialog from "./PreviewDialog";
 import { useDraft } from "@/hooks/useDraft";
 import { useSupporter } from "@/hooks/useSupporter";
 import { useGallery } from "@/hooks/useGallery";
@@ -152,6 +154,8 @@ export default function Editor() {
   const [query, setQuery] = useState("");
   const [showLeadOp, setShowLeadOp] = useState(false);
   const [pinActions, setPinActions] = useState(false);
+  const [zoomSrc, setZoomSrc] = useState<string | null>(null);
+  const [hidePreview, setHidePreview] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -420,6 +424,12 @@ export default function Editor() {
     notify("画像を保存しました。Xの投稿画面に貼り付けてください");
   };
 
+  const openZoom = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    setZoomSrc(canvas.toDataURL("image/png"));
+  };
+
   const handleCopy = async () => {
     await ensureFont(config);
     try {
@@ -465,15 +475,109 @@ export default function Editor() {
       )}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:grid-rows-[min-content_1fr] lg:items-start">
       <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
+        <Section
+          icon={<SearchIcon size={14} />}
+          label="式をさがす（テンプレート・履歴）"
+          hint={query ? `${hits.length}件` : undefined}
+        >
+          <div className="relative">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="例：睡眠 / しあわせ / 会議"
+              className={`${fieldClass} w-full pl-9`}
+            />
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
+              <SearchIcon size={14} />
+            </span>
+          </div>
+          {!query.trim() && (
+            <p className="mt-2 text-[11px] text-faint">
+              テンプレート約{PRESET_VARIATIONS.toLocaleString("ja-JP")}通りと、この端末の履歴
+              {searchableCount}件から探せます。
+            </p>
+          )}
+          {query.trim() &&
+            (hits.length === 0 ? (
+              <p className="mt-2 text-[11px] text-faint">
+                一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
+              </p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {hits.map((hit) => (
+                  <li key={`${hit.kind}-${hit.id}`}>
+                    <button
+                      onClick={() => applyHit(hit)}
+                      title={hit.text}
+                      className="flex w-full items-center gap-2 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
+                    >
+                      <span
+                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+                          hit.kind === "history"
+                            ? "bg-accent/10 text-accent"
+                            : "bg-panel text-faint"
+                        }`}
+                      >
+                        {hit.kind === "history" ? "履歴" : "テンプレ"}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
+                        {hit.text}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            ))}
+          <Hint label="検索について">
+            テンプレートとこの端末の履歴をまとめて探します。ひらがな・カタカナ・漢字の違いや、1文字くらいの打ち間違いは自動で吸収します（スペース区切りで複数のことばを指定すると、両方を含む式だけが残ります）。書きかけの式や、ことばになっていない履歴は結果に出ません。
+          </Hint>
+        </Section>
+
+        <Section
+          tone="info"
+          icon={<CalendarIcon size={14} />}
+          label="今日のテンプレート"
+          hint={`${DAILY_PRESET_COUNT}件`}
+        >
+          <div className="flex flex-wrap gap-1.5">
+            {todaysPresets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => applyPreset(preset)}
+                title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
+                  .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
+                  .join("")}`}
+                className={chipClass}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <Hint label="テンプレートについて">
+              1日に1回入れ替わります。クリックすると入力欄に読み込みます。候補は全部で約
+              {PRESET_VARIATIONS.toLocaleString("ja-JP")}通りあり、「別の10件」で順に見られます。
+            </Hint>
+            <button
+              onClick={() => setPresetRound((round) => round + 1)}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
+            >
+              <RefreshIcon size={13} />
+              別の10件
+            </button>
+          </div>
+        </Section>
+
         {/* Starting over is a first move, not a last one, so it sits above the
             fields instead of below the export buttons. */}
         <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
           <p className="text-[11px] text-faint">入力（この端末に自動保存）</p>
           <button
             onClick={resetAll}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-danger/50 hover:text-danger"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-danger/40 bg-danger/5 px-2.5 py-1.5 text-[11px] font-medium text-danger transition hover:border-danger hover:bg-danger/10"
           >
-            <RefreshIcon size={13} />
+            <TrashIcon size={13} />
             入力をリセット
           </button>
         </div>
@@ -689,7 +793,7 @@ export default function Editor() {
         <Section
           index="⑥"
           icon={<UserIcon size={14} />}
-          label="アカウント名 / クレジット"
+          label="アカウント名 / ロゴ"
         >
           <Field
             value={config.author}
@@ -699,14 +803,14 @@ export default function Editor() {
           />
           <div className="mt-2.5 space-y-2">
             <Toggle
+              checked={config.showWatermark}
+              onChange={(checked) => update({ showWatermark: checked })}
+              label="画像に「ことばの方程式」のロゴを入れる"
+            />
+            <Toggle
               checked={config.showCopyright}
               onChange={(checked) => update({ showCopyright: checked })}
               label={`© 表記を付ける（© ${new Date().getFullYear()} ${config.author || "you"}）`}
-            />
-            <Toggle
-              checked={config.showWatermark}
-              onChange={(checked) => update({ showWatermark: checked })}
-              label="「ことばの方程式」のロゴを入れる"
             />
             {supporter.active && (
               <>
@@ -722,6 +826,9 @@ export default function Editor() {
               </>
             )}
           </div>
+          <Hint>
+            ロゴは外せます。外すと左上に何も入らない画像になります（商用利用も自由です）。
+          </Hint>
         </Section>
 
         <Section
@@ -832,11 +939,27 @@ export default function Editor() {
                 {size.width} × {size.height}
               </span>
               <button
+                onClick={openZoom}
+                className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
+              >
+                <ExpandIcon size={13} />
+                拡大
+              </button>
+              <button
                 onClick={() => setShowSizes((previous) => !previous)}
                 aria-expanded={showSizes}
                 className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
               >
                 サイズを変える
+              </button>
+              {/* Folding the pinned preview away gives the form the whole
+                  screen while typing on a phone. */}
+              <button
+                onClick={() => setHidePreview((previous) => !previous)}
+                aria-expanded={!hidePreview}
+                className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent lg:hidden"
+              >
+                {hidePreview ? "ひらく" : "たたむ"}
               </button>
             </div>
           </div>
@@ -863,16 +986,30 @@ export default function Editor() {
               </p>
             </div>
           )}
-          <div className="flex w-full items-center justify-center p-3 sm:p-8">
-            <canvas
-              ref={canvasRef}
-              aria-label="生成された思考式の画像"
-              className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 sm:max-h-[42vh] lg:max-h-[58vh]"
-            />
+          <div
+            className={`w-full items-center justify-center p-3 sm:p-8 ${hidePreview ? "hidden lg:flex" : "flex"}`}
+          >
+            <button
+              onClick={openZoom}
+              aria-label="プレビューを拡大して見る"
+              className="group relative flex max-w-full cursor-zoom-in items-center justify-center"
+            >
+              <canvas
+                ref={canvasRef}
+                aria-label="生成された思考式の画像"
+                className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 group-hover:scale-[1.01] sm:max-h-[42vh] lg:max-h-[58vh]"
+              />
+              <span className="pointer-events-none absolute bottom-2 right-2 hidden items-center gap-1 rounded-full bg-ink/70 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100 sm:inline-flex">
+                <ExpandIcon size={11} />
+                拡大
+              </span>
+            </button>
           </div>
           {/* The pinned preview is the point of this card on a phone, so the
               buttons stay folded until someone asks for them. */}
-          <div className="border-t border-line px-3 py-1.5 lg:hidden">
+          <div
+            className={`border-t border-line px-3 py-1.5 lg:hidden ${hidePreview ? "hidden" : ""}`}
+          >
             {pinActions ? (
               <div className="flex items-center gap-2">
                 {canCopy && (
@@ -1008,99 +1145,7 @@ export default function Editor() {
             </div>
           </Section>
 
-          <Section
-            icon={<SearchIcon size={14} />}
-            label="式をさがす（テンプレート・履歴）"
-            hint={query ? `${hits.length}件` : undefined}
-          >
-            <div className="relative">
-              <input
-                type="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="例：睡眠 / しあわせ / 会議"
-                className={`${fieldClass} w-full pl-9`}
-              />
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
-                <SearchIcon size={14} />
-              </span>
-            </div>
-            {!query.trim() && (
-              <p className="mt-2 text-[11px] text-faint">
-                テンプレート約{PRESET_VARIATIONS.toLocaleString("ja-JP")}通りと、この端末の履歴
-                {searchableCount}件から探せます。
-              </p>
-            )}
-            {query.trim() &&
-              (hits.length === 0 ? (
-                <p className="mt-2 text-[11px] text-faint">
-                  一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
-                </p>
-              ) : (
-                <ul className="mt-2 space-y-1">
-                  {hits.map((hit) => (
-                    <li key={`${hit.kind}-${hit.id}`}>
-                      <button
-                        onClick={() => applyHit(hit)}
-                        title={hit.text}
-                        className="flex w-full items-center gap-2 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
-                      >
-                        <span
-                          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                            hit.kind === "history"
-                              ? "bg-accent/10 text-accent"
-                              : "bg-panel text-faint"
-                          }`}
-                        >
-                          {hit.kind === "history" ? "履歴" : "テンプレ"}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
-                          {hit.text}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              ))}
-            <Hint label="検索について">
-              テンプレートとこの端末の履歴をまとめて探します。ひらがな・カタカナ・漢字の違いや、1文字くらいの打ち間違いは自動で吸収します（スペース区切りで複数のことばを指定すると、両方を含む式だけが残ります）。書きかけの式や、ことばになっていない履歴は結果に出ません。
-            </Hint>
-          </Section>
 
-          <Section
-            tone="info"
-            icon={<CalendarIcon size={14} />}
-            label="今日のテンプレート"
-            hint={`${DAILY_PRESET_COUNT}件`}
-          >
-            <div className="flex flex-wrap gap-1.5">
-              {todaysPresets.map((preset) => (
-                <button
-                  key={preset.id}
-                  onClick={() => applyPreset(preset)}
-                  title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
-                    .map((element, index) => (index === 0 ? element.text : `${element.op}${element.text}`))
-                    .join("")}`}
-                  className={chipClass}
-                >
-                  {preset.label}
-                </button>
-              ))}
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <Hint label="テンプレートについて">
-                1日に1回入れ替わります。クリックすると入力欄に読み込みます。候補は全部で約
-                {PRESET_VARIATIONS.toLocaleString("ja-JP")}通りあり、「別の10件」で順に見られます。
-              </Hint>
-              <button
-                onClick={() => setPresetRound((round) => round + 1)}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
-              >
-                <RefreshIcon size={13} />
-                別の10件
-              </button>
-            </div>
-          </Section>
 
           <Section
             tone="info"
@@ -1180,6 +1225,18 @@ export default function Editor() {
         </div>
       </div>
       </div>
+      {zoomSrc && (
+        <PreviewDialog
+          src={zoomSrc}
+          width={size.width}
+          height={size.height}
+          sizeLabel={size.label}
+          canCopy={canCopy}
+          onCopy={() => void handleCopy()}
+          onDownload={() => void handleDownload()}
+          onClose={() => setZoomSrc(null)}
+        />
+      )}
     </>
   );
 }

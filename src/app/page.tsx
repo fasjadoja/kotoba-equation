@@ -4,7 +4,14 @@ import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
 import { donateButtonClass } from "@/components/DonateButton";
 import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
-import { SITE, SOCIAL } from "@/lib/site";
+import {
+  DONATE_ANCHOR,
+  DONATE_ENABLED,
+  DONATE_SUGGESTED,
+  DONATE_TIERS,
+  SITE,
+  SOCIAL,
+} from "@/lib/site";
 
 const POINTS = [
   {
@@ -27,7 +34,7 @@ const POINTS = [
 const FAQ = [
   {
     q: "無料で使えますか？",
-    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の寄付（500円）だけで運営しています。",
+    a: "はい。すべての機能を無料で、回数制限なく使えます。広告も登録もありません。気に入った方の任意の寄付だけで運営しています。",
   },
   {
     q: "作った画像は商用利用できますか？",
@@ -185,23 +192,42 @@ export default function Home() {
           </section>
         </Reveal>
 
-        {SITE.donateUrl && (
+        {DONATE_ENABLED && (
           <Reveal className="mt-4" delay={80}>
-          <section className="flex flex-col gap-5 rounded-2xl border border-line bg-panel p-6 shadow-card sm:flex-row sm:items-center sm:justify-between sm:p-8">
-            <div>
-              <h2 className="text-[15px] font-semibold text-fg">このサイトに寄付する</h2>
-              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-                広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（500円・1回限り・見返りの商品はありません）。
-              </p>
+          <section
+            id={DONATE_ANCHOR}
+            className="scroll-mt-20 rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8"
+          >
+            <h2 className="text-[15px] font-semibold text-fg">このサイトに寄付する</h2>
+            <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
+              広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
+            </p>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              {DONATE_TIERS.map((tier) => (
+                <a
+                  key={tier.amount}
+                  href={tier.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={
+                    tier.amount === DONATE_SUGGESTED
+                      ? `${donateButtonClass} flex-col gap-0.5 px-5 py-3`
+                      : "inline-flex flex-col items-center justify-center gap-0.5 rounded-full border-[1.5px] border-control px-5 py-3 font-semibold text-fg transition hover:border-coffeeDark hover:bg-coffee/15"
+                  }
+                >
+                  <span className="text-[15px]">
+                    {tier.amount.toLocaleString("ja-JP")}円
+                    {tier.amount === DONATE_SUGGESTED && (
+                      <span className="ml-1.5 text-[10px] font-medium">おすすめ</span>
+                    )}
+                  </span>
+                  <span className="text-[11px] font-normal opacity-80">{tier.note}</span>
+                </a>
+              ))}
             </div>
-            <a
-              href={SITE.donateUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${donateButtonClass} shrink-0 px-6 py-3.5 text-[14px]`}
-            >
-              500円を寄付する
-            </a>
+            <p className="mt-3 text-[11px] leading-relaxed text-faint">
+              決済はStripeのページで行われ、カード番号はこのサイトには届きません。支払い後にこのサイトへ戻ると、24時間だけ画像のロゴがゴールドになります。
+            </p>
           </section>
           </Reveal>
         )}

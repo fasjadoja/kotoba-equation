@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
 import { donateButtonClass } from "./DonateButton";
-import { SITE } from "@/lib/site";
+import { DONATE_ANCHOR, DONATE_ENABLED } from "@/lib/site";
 
 /** Condenses and lifts the bar once the page scrolls away from the top. */
 export default function SiteHeader() {
@@ -30,11 +30,9 @@ export default function SiteHeader() {
         }`}
       >
         <Logo />
-        {SITE.donateUrl && (
+        {DONATE_ENABLED && (
           <a
-            href={SITE.donateUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/#${DONATE_ANCHOR}`}
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
             寄付する

@@ -266,7 +266,8 @@ export default function Editor() {
         text: "",
       })),
       subNote: "",
-      hashtags: "",
+      // The site tag is part of the look, not something typed, so it survives.
+      hashtags: DEFAULT_CONFIG.hashtags,
       author: "",
       showCopyright: false,
     });
@@ -294,6 +295,7 @@ export default function Editor() {
       relation: preset.relation ?? "＝",
       subNote: preset.subNote,
       elements: preset.elements.map((element) => ({ ...element })),
+      hashtags: config.hashtags.trim() || DEFAULT_CONFIG.hashtags,
     });
     setCustomOps([]);
     setCustomRelation(!isPresetRelation(preset.relation ?? "＝"));
@@ -866,6 +868,8 @@ export default function Editor() {
           />
           <Hint>
             スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
+            <br />
+            「#ことばの方程式」は最初から入っています。不要なら消してください。
           </Hint>
         </Section>
 

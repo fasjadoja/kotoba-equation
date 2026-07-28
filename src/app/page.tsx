@@ -39,6 +39,28 @@ const POINTS = [
   },
 ];
 
+const STEPS = [
+  {
+    title: "ことばを入れる",
+    body: "結果と、その理由になることばを入れるだけ。テンプレートから選んでも作れます。",
+  },
+  {
+    title: "見た目をととのえる",
+    body: "記号・書体・配色・サイズを選ぶと、プレビューがその場で変わります。",
+  },
+  {
+    title: "保存して投稿する",
+    body: "PNGで保存するか画像をコピーして、X・Instagram・note・TikTokにそのまま投稿できます。",
+  },
+];
+
+const USES = [
+  "考えていることを1枚にまとめて投稿したいとき",
+  "note やブログの見出し画像がほしいとき",
+  "自己紹介やプロフィール用に、自分を表す式を作りたいとき",
+  "スライドや資料に、要点を1枚で示す図を入れたいとき",
+];
+
 const FAQ = [
   {
     q: "無料で使えますか？",
@@ -209,6 +231,46 @@ export default function Home() {
         <Editor />
 
         <Reveal className="mt-16">
+          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
+            <h2 className="text-[15px] font-semibold text-fg">ことばの方程式とは</h2>
+            <p className="mt-1.5 max-w-3xl text-[13px] leading-relaxed text-muted">
+              「ことばの方程式」は、思っていることを「元気＝睡眠＋ごはん＋日光」のような式や「今日＞昨日」のような比較のかたちにして、SNSにそのまま投稿できる画像にする無料のツールです。登録も、アプリのインストールも、料金もいりません。画像づくりはすべてブラウザの中で行われ、入力したことばはこの端末から出ません。
+            </p>
+            <h3 className="mt-5 text-[13px] font-semibold text-fg">使い方</h3>
+            <ol className="mt-2 grid gap-2 text-[13px] leading-relaxed text-muted sm:grid-cols-3">
+              {STEPS.map((step, index) => (
+                <li
+                  key={step.title}
+                  className="rounded-xl border border-line bg-panel/70 px-3.5 py-3 shadow-sm"
+                >
+                  <span className="block text-[12px] font-semibold text-fg">
+                    <span className="mr-1.5 text-accent">{index + 1}</span>
+                    {step.title}
+                  </span>
+                  <span className="mt-1 block text-[12px] leading-snug">{step.body}</span>
+                </li>
+              ))}
+            </ol>
+            <h3 className="mt-5 text-[13px] font-semibold text-fg">こんなときに</h3>
+            <ul className="mt-2 grid gap-1.5 text-[13px] leading-relaxed text-muted sm:grid-cols-2">
+              {USES.map((use) => (
+                <li key={use} className="flex gap-2">
+                  <span className="text-accent" aria-hidden>
+                    ・
+                  </span>
+                  <span>{use}</span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[12px] text-muted">
+              <Link href="/about" className="font-medium transition hover:text-accent">
+                名前の由来と運営の方針 →
+              </Link>
+            </p>
+          </section>
+        </Reveal>
+
+        <Reveal className="mt-4">
           {/* Folded away by default: the answers are for the few who look for
               them, and the donation section should stay within reach. */}
           <details className="group rounded-2xl border border-line bg-panel shadow-card">

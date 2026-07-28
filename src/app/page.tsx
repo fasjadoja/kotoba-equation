@@ -8,6 +8,7 @@ import {
   DONATE_ANCHOR,
   DONATE_CUSTOM_URL,
   DONATE_ENABLED,
+  DONATE_LARGE,
   DONATE_MAX,
   DONATE_MIN,
   DONATE_STEP,
@@ -218,7 +219,7 @@ export default function Home() {
             <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
               広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
+            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
               {DONATE_TIERS.map((tier) => (
                 <a
                   key={tier.amount}
@@ -254,6 +255,16 @@ export default function Home() {
             {DONATE_CUSTOM_URL && (
               <p className="mt-2 text-[11px] leading-relaxed text-faint">
                 金額はStripeの決済ページで、{DONATE_STEP}円の個数を変えて決められます（例：個数20で{(DONATE_STEP * 20).toLocaleString("ja-JP")}円）。
+                {" "}
+                <a
+                  href={DONATE_LARGE.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 transition hover:text-fg"
+                >
+                  {DONATE_LARGE.amount.toLocaleString("ja-JP")}円で支える
+                </a>
+                こともできます。
               </p>
             )}
             <p className="mt-3 text-[11px] leading-relaxed text-faint">

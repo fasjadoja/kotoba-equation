@@ -49,18 +49,29 @@ function markGradient(
   return gradient;
 }
 
-/** Gold lockup printed for supporters, in place of the brand gradient. */
-export function supporterGradient(
+/**
+ * Lockups unlocked by a donation. Each rank keeps the same geometry and only
+ * changes the metal, so the mark still reads as the same brand.
+ */
+export const RANK_STYLES = {
+  supporter: { from: "#E9CD7E", to: "#8C6A12", ink: "#A98220", badge: "✦ SUPPORTER" },
+  premium: { from: "#FFE9A8", to: "#B8860B", ink: "#8C6A12", badge: "✦✦ PREMIUM" },
+  elite: { from: "#F5F0FF", to: "#4B2E83", ink: "#4B2E83", badge: "✦✦✦ PATRON" },
+} as const;
+
+export type RankStyleId = keyof typeof RANK_STYLES;
+
+export function rankGradient(
   ctx: CanvasRenderingContext2D,
+  rank: RankStyleId,
   x: number,
   y: number,
   width: number,
   height: number,
 ): CanvasGradient {
-  return markGradient(ctx, x, y, width, height, "#E9CD7E", "#8C6A12");
+  const style = RANK_STYLES[rank];
+  return markGradient(ctx, x, y, width, height, style.from, style.to);
 }
-
-export const SUPPORTER_INK = "#A98220";
 
 /** Draws the mark with its top-left corner at (x, y). */
 export function drawLogoMark(

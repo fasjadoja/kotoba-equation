@@ -59,7 +59,6 @@ import {
   TrashIcon,
   TypeIcon,
   UserIcon,
-  UsersIcon,
   XIcon,
 } from "./icons";
 import {
@@ -72,8 +71,6 @@ import { isSearchable, searchAll, type SearchHit } from "@/lib/search";
 import PreviewDialog from "./PreviewDialog";
 import { useDraft } from "@/hooks/useDraft";
 import { useSupporter } from "@/hooks/useSupporter";
-import { useGallery } from "@/hooks/useGallery";
-import { GALLERY_LIMIT, galleryText, relativeTime, type GalleryItem } from "@/lib/gallery";
 
 const RENDER_OPTIONS: Record<CanvasFontId, RenderOptions> = {
   sans: {
@@ -146,7 +143,6 @@ export default function Editor() {
   const [customOps, setCustomOps] = useState<boolean[]>([]);
   const [customRelation, setCustomRelation] = useState(false);
   const [justUpdated, setJustUpdated] = useState(false);
-  const [makePublic, setMakePublic] = useState(false);
   const [keepHistory, setKeepHistory] = useState(true);
   const [showSizes, setShowSizes] = useState(false);
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
@@ -158,8 +154,9 @@ export default function Editor() {
   const [hidePreview, setHidePreview] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
-  const gallery = useGallery();
   const supporter = useSupporter();
+  const unlockedRank = supporter.rank;
+  const unlockRule = supporter.rule;
 
   const adoptConfig = useCallback((next: FormulaConfig) => {
     setConfig(next);
@@ -234,18 +231,46 @@ export default function Editor() {
 
   useEffect(() => remember(config), [config, remember]);
 
-  // The gold lockup is only offered while the supporter window is open.
+  // A donor lockup only stays selected while that exact rank is unlocked, so
+  // it disappears on its own once the days or the images run out.
   useEffect(() => {
-    if (!supporter.active && config.premiumLogo) update({ premiumLogo: false });
-  }, [supporter.active, config.premiumLogo, update]);
+    if (config.logoRank !== "brand" && supporter.rank !== config.logoRank) {
+      update({ logoRank: "brand" });
+    }
+  }, [supporter.rank, config.logoRank, update]);
 
+  // Clears what was typed and leaves the design choices (size, colours, font)
+  // alone, so the button always does something visible.
   const resetAll = () => {
     adoptConfig({
-      ...DEFAULT_CONFIG,
-      elements: DEFAULT_CONFIG.elements.map((element) => ({ ...element })),
+      ...config,
+      resultText: "",
+      relation: DEFAULT_CONFIG.relation,
+      elements: DEFAULT_CONFIG.elements.map((element) => ({
+        ...element,
+        text: "",
+      })),
+      subNote: "",
+      hashtags: "",
+      author: "",
+      showCopyright: false,
     });
+    setShowLeadOp(false);
     forget();
-    notify("入力を初期状態に戻しました");
+    notify("入力を空にしました");
+  };
+
+  // The button above the preview is easy to hit by accident, so it asks first
+  // whenever there is something to lose.
+  const confirmReset = () => {
+    const hasInput =
+      !!config.resultText.trim() ||
+      config.elements.some((element) => !!element.text.trim()) ||
+      !!config.subNote.trim();
+    if (hasInput && !window.confirm("入力した内容をすべて消しますか？")) {
+      return;
+    }
+    resetAll();
   };
 
   const applyPreset = (preset: Preset) => {
@@ -257,20 +282,6 @@ export default function Editor() {
     });
     setCustomOps([]);
     setCustomRelation(!isPresetRelation(preset.relation ?? "＝"));
-  };
-
-  const applyGalleryItem = (item: GalleryItem) => {
-    update({
-      resultText: item.resultText,
-      relation: item.relation || "＝",
-      subNote: item.subNote,
-      elements: item.elements.map((element) => ({ ...element })),
-    });
-    setCustomOps(
-      item.elements.map((element) => !!element.op && !isPresetOperator(element.op)),
-    );
-    setCustomRelation(!isPresetRelation(item.relation || "＝"));
-    notify("みんなの作品をテンプレとして読み込みました");
   };
 
   const restore = (entry: HistoryEntry) => {
@@ -345,15 +356,10 @@ export default function Editor() {
     });
   };
 
-  /** Both destinations are the user's choice; nothing leaves the browser unless
-   *  the public gallery is explicitly ticked. */
+  /** Runs once per exported image: history, and the count of donor lockups. */
   const commit = () => {
     if (keepHistory) save(config);
-    if (makePublic) {
-      void gallery.share(config).then((result) => {
-        if (!result.ok && result.reason) notify(result.reason, "error");
-      });
-    }
+    if (config.logoRank !== "brand") supporter.spend();
   };
 
   const downloadImage = async () => {
@@ -449,19 +455,24 @@ export default function Editor() {
 
   return (
     <>
-      {supporter.justUnlocked && (
+      {supporter.justUnlocked && supporter.rule && (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#E4C97A] bg-[#FFF8E7] p-4 shadow-card">
           <span className="mt-0.5 text-[18px]" aria-hidden>
             ✦
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-[#7A5A10]">
-              ご支援ありがとうございます。サポーター限定のゴールドロゴを解錠しました。
+              ご支援ありがとうございます。寄付した方限定の「{supporter.rule.label}」を解錠しました。
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#8A6A1C]">
-              これから{Math.max(1, supporter.hoursLeft)}
-              時間のあいだ、⑥の「ゴールドのロゴにする」をONにすると、画像のロゴが金色（✦
-              SUPPORTER 付き）になります。設定はこのブラウザにだけ保存されます。
+              ⑥の「{supporter.rule.label}にする」をONにすると、画像のロゴが変わります。
+              {supporter.rule.exports === null
+                ? `これから${Math.max(1, supporter.hoursLeft)}時間のあいだ使えます。`
+                : `コピー・保存した画像${supporter.rule.exports}枚分まで、最長で${Math.max(
+                    1,
+                    Math.round(supporter.hoursLeft / 24),
+                  )}日間の限定です。`}
+              設定はこのブラウザにだけ保存されます。
             </p>
           </div>
           <button
@@ -573,10 +584,7 @@ export default function Editor() {
             fields instead of below the export buttons. */}
         <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
           <p className="text-[11px] text-faint">入力（この端末に自動保存）</p>
-          <button
-            onClick={resetAll}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-danger/40 bg-danger/5 px-2.5 py-1.5 text-[11px] font-medium text-danger transition hover:border-danger hover:bg-danger/10"
-          >
+          <button onClick={resetAll} className={`${resetButtonClass} shrink-0`}>
             <TrashIcon size={13} />
             入力をリセット
           </button>
@@ -586,7 +594,7 @@ export default function Editor() {
           <Field
             value={config.resultText}
             onChange={(value) => update({ resultText: value })}
-            placeholder="例：伝えたい結論"
+            placeholder="例：A（伝えたい結論）"
             limit={LIMITS.resultText}
           />
         </Section>
@@ -710,7 +718,7 @@ export default function Editor() {
                   <input
                     type="text"
                     value={element.text}
-                    placeholder={`例：要素${index + 1}`}
+                    placeholder={`例：${String.fromCharCode(66 + (index % 25))}`}
                     aria-label={`要素 ${index + 1} のことば`}
                     maxLength={LIMITS.element}
                     onChange={(e) =>
@@ -812,16 +820,25 @@ export default function Editor() {
               onChange={(checked) => update({ showCopyright: checked })}
               label={`© 表記を付ける（© ${new Date().getFullYear()} ${config.author || "you"}）`}
             />
-            {supporter.active && (
+            {unlockedRank && unlockRule && (
               <>
                 <Toggle
-                  checked={config.premiumLogo}
-                  onChange={(checked) => update({ premiumLogo: checked })}
-                  label="ゴールドのロゴにする（サポーター限定）"
+                  checked={config.logoRank === unlockedRank}
+                  onChange={(checked) =>
+                    update({ logoRank: checked ? unlockedRank : "brand" })
+                  }
+                  label={`${unlockRule.label}にする（寄付した方限定）`}
+                  disabled={!config.showWatermark}
                 />
                 <p className="text-[11px] leading-snug text-[#8A6A1C]">
-                  ✦ 解錠中：あと約{supporter.hoursLeft}
-                  時間。ロゴが金色になり、「✦ SUPPORTER」が並びます。
+                  ✦ 解錠中：
+                  {supporter.left === null
+                    ? `あと約${supporter.hoursLeft}時間`
+                    : `のこり${supporter.left}枚（あと約${Math.max(
+                        1,
+                        Math.round(supporter.hoursLeft / 24),
+                      )}日）`}
+                  。書き出した画像の枚数ぶんだけ使えます。
                 </p>
               </>
             )}
@@ -833,28 +850,36 @@ export default function Editor() {
 
         <Section
           index="⑦"
-          icon={<SaveIcon size={14} />}
-          label={gallery.enabled ? "保存と公開" : "履歴に保存"}
+          icon={<ClockIcon size={14} />}
+          label="この式を履歴に残すか"
         >
-          <div className="space-y-2">
-            <Toggle
-              checked={keepHistory}
-              onChange={setKeepHistory}
-              label="この式を履歴に保存する（この端末だけ）"
-            />
-            {gallery.enabled && (
-              <Toggle
-                checked={makePublic}
-                onChange={setMakePublic}
-                label="この式を「みんなの作品」に載せる（公開）"
-              />
-            )}
+          {/* Two explicit choices read faster than one checkbox whose unchecked
+              meaning has to be inferred. */}
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              onClick={() => setKeepHistory(true)}
+              aria-pressed={keepHistory}
+              className={`${choiceClass(keepHistory)} text-left leading-snug`}
+            >
+              履歴に残す
+              <span className="mt-0.5 block text-[10px] font-normal text-faint">
+                あとで呼び出せます
+              </span>
+            </button>
+            <button
+              onClick={() => setKeepHistory(false)}
+              aria-pressed={!keepHistory}
+              className={`${choiceClass(!keepHistory)} text-left leading-snug`}
+            >
+              残さない
+              <span className="mt-0.5 block text-[10px] font-normal text-faint">
+                保存しても記録しません
+              </span>
+            </button>
           </div>
           <Hint>
-            履歴は保存・シェアしたときに、直近{HISTORY_LIMIT}件までこのブラウザに残ります（テンプレとして再利用できます）。
-            {gallery.enabled
-              ? "公開にチェックしたときだけ、式の文字（結果・要素・補足・ハッシュタグ・クレジット）がみんなの作品に載ります。リンクや連絡先を含む式は公開されません。"
-              : ""}
+            履歴はこの端末のブラウザにだけ、直近{HISTORY_LIMIT}
+            件まで残ります（サーバーには送られません）。画像を保存・コピー・シェアしたときに記録されます。
           </Hint>
         </Section>
 
@@ -906,9 +931,18 @@ export default function Editor() {
               </p>
             )}
           </div>
-          <p className="border-t border-line pt-2.5 text-[11px] leading-snug text-faint">
-            入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
-          </p>
+          <div className="flex items-center justify-between gap-2 border-t border-line pt-2.5">
+            <p className="text-[11px] leading-snug text-faint">
+              入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
+            </p>
+            <button
+              onClick={resetAll}
+              className={`${resetButtonClass} shrink-0`}
+            >
+              <TrashIcon size={13} />
+              リセット
+            </button>
+          </div>
         </div>
       </div>
 
@@ -951,6 +985,15 @@ export default function Editor() {
                 className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
               >
                 サイズを変える
+              </button>
+              <button
+                onClick={confirmReset}
+                aria-label="入力をリセット"
+                title="入力をリセット"
+                className={resetButtonClass}
+              >
+                <TrashIcon size={13} />
+                リセット
               </button>
               {/* Folding the pinned preview away gives the form the whole
                   screen while typing on a phone. */}
@@ -1186,42 +1229,6 @@ export default function Editor() {
             )}
           </Section>
 
-          {gallery.enabled && (
-            <Section
-              tone="info"
-              icon={<UsersIcon size={14} />}
-              label={`みんなの作品（最新${GALLERY_LIMIT}件・リアルタイム）`}
-              hint={gallery.items.length > 0 ? `${gallery.items.length}` : undefined}
-            >
-              {gallery.loading ? (
-                <p className="text-[11px] text-faint">読み込み中…</p>
-              ) : gallery.items.length === 0 ? (
-                <p className="text-[11px] text-faint">
-                  まだ公開された式はありません。上の⑦でチェックすると、ここに並びます。
-                </p>
-              ) : (
-                <ul className="space-y-1">
-                  {gallery.items.map((item) => (
-                    <li key={item.id}>
-                      <button
-                        onClick={() => applyGalleryItem(item)}
-                        className="flex w-full items-center justify-between gap-3 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
-                        title={item.subNote || galleryText(item)}
-                      >
-                        <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
-                          {galleryText(item)}
-                        </span>
-                        <span className="shrink-0 text-[10px] text-faint">
-                          {item.author ? `${item.author}・` : ""}
-                          {relativeTime(item.createdAt)}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </Section>
-          )}
         </div>
       </div>
       </div>
@@ -1246,6 +1253,11 @@ export default function Editor() {
 // the white card behind it.
 const fieldClass =
   "h-10 rounded-lg border-[1.5px] border-control bg-white px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/70 focus:border-accent focus:shadow-none focus:ring-[3px] focus:ring-accent/20 sm:text-[13px]";
+
+/** Destructive actions share one red outline so they are never mistaken for
+ *  the blue "choose this" controls. */
+const resetButtonClass =
+  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-danger/40 bg-danger/5 px-2.5 py-1.5 text-[11px] font-medium text-danger transition hover:border-danger hover:bg-danger/10";
 
 const chipClass =
   "rounded-md border-[1.5px] border-control bg-panel px-2.5 py-1.5 text-[12px] font-medium text-fg transition hover:border-accent hover:text-accent";
@@ -1398,16 +1410,25 @@ function Toggle({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] text-fg transition hover:border-accent/70">
+    <label
+      className={`flex items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] transition ${
+        disabled
+          ? "cursor-not-allowed text-faint"
+          : "cursor-pointer text-fg hover:border-accent/70"
+      }`}
+    >
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         className="h-4 w-4 shrink-0 accent-accent"
       />

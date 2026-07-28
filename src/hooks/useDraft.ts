@@ -9,6 +9,7 @@ import {
   MAX_ELEMENTS,
   SIZES,
   TEXT_SCALE,
+  isLogoRank,
   type FormulaConfig,
   type LayoutId,
   type SizeId,
@@ -84,7 +85,7 @@ export function normalizeConfig(value: unknown): FormulaConfig | null {
       DEFAULT_CONFIG.sizeId,
     ),
     showWatermark: draft.showWatermark !== false,
-    premiumLogo: draft.premiumLogo === true,
+    logoRank: isLogoRank(draft.logoRank) ? draft.logoRank : "brand",
     textScale: clampNumber(draft.textScale, TEXT_SCALE, 1),
     marginScale: clampNumber(draft.marginScale, MARGIN_SCALE, 1),
   };

@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DAILY_PRESET_COUNT,
-  PRESET_VARIATIONS,
   dailyPresets,
   dayKey,
   type Preset,
@@ -67,7 +66,7 @@ import {
   useHistory,
   type HistoryEntry,
 } from "@/hooks/useHistory";
-import { isSearchable, searchAll, type SearchHit } from "@/lib/search";
+import { searchAll, type SearchHit } from "@/lib/search";
 import PreviewDialog from "./PreviewDialog";
 import { useDraft } from "@/hooks/useDraft";
 import { useSupporter } from "@/hooks/useSupporter";
@@ -172,7 +171,6 @@ export default function Editor() {
   const { remember, forget } = useDraft(adoptConfig);
 
   const hits = useMemo(() => searchAll(entries, query, SEARCH_LIMIT), [entries, query]);
-  const searchableCount = useMemo(() => entries.filter(isSearchable).length, [entries]);
 
   const leadOp = showLeadOp || !!config.elements[0]?.op;
   const saveLabel = canShareFiles ? "写真に保存" : "PNGで保存";
@@ -525,7 +523,6 @@ export default function Editor() {
         <Section
           icon={<SearchIcon size={14} />}
           label="式をさがす（テンプレート・履歴）"
-          hint={query ? `${hits.length}件` : undefined}
         >
           <div className="relative">
             <input
@@ -541,8 +538,7 @@ export default function Editor() {
           </div>
           {!query.trim() && (
             <p className="mt-2 text-[11px] text-faint">
-              テンプレート約{PRESET_VARIATIONS.toLocaleString("ja-JP")}通りと、この端末の履歴
-              {searchableCount}件から探せます。
+              テンプレートと、この端末の履歴から探せます。
             </p>
           )}
           {query.trim() &&
@@ -585,7 +581,6 @@ export default function Editor() {
           tone="info"
           icon={<CalendarIcon size={14} />}
           label="今日のテンプレート"
-          hint={`${DAILY_PRESET_COUNT}件`}
         >
           <div className="flex flex-wrap gap-1.5">
             {todaysPresets.map((preset) => (
@@ -603,15 +598,14 @@ export default function Editor() {
           </div>
           <div className="mt-2 flex items-center justify-between gap-2">
             <Hint label="テンプレートについて">
-              1日に1回入れ替わります。クリックすると入力欄に読み込みます。候補は全部で約
-              {PRESET_VARIATIONS.toLocaleString("ja-JP")}通りあり、「別の10件」で順に見られます。
+              1日に1回入れ替わります。クリックすると入力欄に読み込みます。「別のテンプレを見る」で、まだ見ていない候補を順に見られます。
             </Hint>
             <button
               onClick={() => setPresetRound((round) => round + 1)}
               className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
             >
               <RefreshIcon size={13} />
-              別の10件
+              別のテンプレを見る
             </button>
           </div>
         </Section>

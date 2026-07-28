@@ -196,9 +196,20 @@ export default function Home() {
         <Editor />
 
         <Reveal className="mt-16">
-          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
-            <h2 className="mb-5 text-[15px] font-semibold text-fg">よくある質問</h2>
-            <dl className="grid gap-6 sm:grid-cols-2">
+          {/* Folded away by default: the answers are for the few who look for
+              them, and the donation section should stay within reach. */}
+          <details className="group rounded-2xl border border-line bg-panel shadow-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4 sm:px-8">
+              <h2 className="text-[15px] font-semibold text-fg">よくある質問</h2>
+              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition group-hover:text-accent">
+                <span className="group-open:hidden">ひらく</span>
+                <span className="hidden group-open:inline">とじる</span>
+                <span className="transition-transform group-open:rotate-180" aria-hidden>
+                  ▼
+                </span>
+              </span>
+            </summary>
+            <dl className="grid gap-6 border-t border-line px-6 py-5 sm:grid-cols-2 sm:px-8">
               {FAQ.map((item) => (
                 <div key={item.q}>
                   <dt className="text-[13px] font-medium text-fg">{item.q}</dt>
@@ -206,7 +217,7 @@ export default function Home() {
                 </div>
               ))}
             </dl>
-          </section>
+          </details>
         </Reveal>
 
         {DONATE_ENABLED && (

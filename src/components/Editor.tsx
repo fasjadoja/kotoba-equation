@@ -518,8 +518,10 @@ export default function Editor() {
           </button>
         </div>
       )}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[404px_minmax(0,1fr)] lg:grid-rows-[min-content_1fr] lg:items-start">
-      <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-span-2 lg:row-start-1">
+      {/* On a desktop everything you edit stays in the left column so the
+          preview can sit still in the right one while you type. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,42%)] lg:items-start">
+      <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-start-1">
         <Section
           icon={<SearchIcon size={14} />}
           label="式をさがす（テンプレート・履歴）"
@@ -926,7 +928,7 @@ export default function Editor() {
 
       {/* On phones the preview is pinned under the header; the band behind it is
           opaque so scrolling content never shows through the gap. */}
-      <div className="sticky top-0 z-10 order-1 -mx-4 min-w-0 bg-ink px-4 pb-2 pt-[48px] lg:static lg:order-none lg:col-start-2 lg:row-start-1 lg:mx-0 lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-0">
+      <div className="sticky top-0 z-10 order-1 -mx-4 min-w-0 bg-ink px-4 pb-2 pt-[48px] lg:order-none lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:mx-0 lg:self-start lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-4 lg:top-[44px]">
         <div
           className={`rounded-2xl border bg-panel transition-shadow duration-300 ${
             justUpdated
@@ -1018,7 +1020,7 @@ export default function Editor() {
               <canvas
                 ref={canvasRef}
                 aria-label="生成された思考式の画像"
-                className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 group-hover:scale-[1.01] sm:max-h-[42vh] lg:max-h-[58vh]"
+                className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 group-hover:scale-[1.01] sm:max-h-[42vh] lg:max-h-[56vh]"
               />
               <span className="pointer-events-none absolute bottom-2 right-2 hidden items-center gap-1 rounded-full bg-ink/70 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100 sm:inline-flex">
                 <ExpandIcon size={11} />
@@ -1074,9 +1076,9 @@ export default function Editor() {
         </div>
       </div>
 
-      <div className="order-3 min-w-0 lg:col-start-2 lg:row-start-2">
+      <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
         <div className="divide-y divide-line rounded-2xl border border-line bg-panel shadow-card">
-          <div className="grid sm:grid-cols-[190px_210px_minmax(0,1fr)] sm:divide-x sm:divide-line">
+          <div className="grid sm:grid-cols-[190px_210px_minmax(0,1fr)] sm:divide-x sm:divide-line lg:grid-cols-2 xl:grid-cols-[190px_210px_minmax(0,1fr)]">
             <Section icon={<TypeIcon size={14} />} label="書体">
               <div className="grid grid-cols-2 gap-1.5">
                 {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
@@ -1109,6 +1111,9 @@ export default function Editor() {
               <Hint>自動はできる限り横1行。入り切らない式だけ上下に分けます。</Hint>
             </Section>
 
+            {/* The narrower left column at lg cannot hold three swatches next
+                to the other two settings, so it takes a row of its own. */}
+            <div className="lg:col-span-2 xl:col-span-1">
             <Section icon={<PaletteIcon size={14} />} label="配色">
               <div className="grid max-w-md grid-cols-3 gap-1.5">
                 {THEMES.map((theme) => (
@@ -1127,6 +1132,7 @@ export default function Editor() {
                 ))}
               </div>
             </Section>
+            </div>
           </div>
 
           <Section
@@ -1212,7 +1218,7 @@ export default function Editor() {
 
       {/* The last step of the whole tool, so it sits after every setting
           instead of in the middle of the form. */}
-      <div className="order-4 min-w-0 lg:col-span-2 lg:row-start-3">
+      <div className="order-4 min-w-0 lg:col-start-1 lg:row-start-3">
         <div className="rounded-2xl border border-line bg-panel shadow-card">
           <Section
             index="⑧"

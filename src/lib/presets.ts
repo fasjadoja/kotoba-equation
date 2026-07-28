@@ -1,4 +1,5 @@
 import { PRESET_THEMES, THEME_PICK, type PresetTheme } from "./presetThemes";
+import { QUOTE_PRESETS } from "./quotePresets";
 import type { FormulaElement } from "./types";
 
 export type PresetCategory =
@@ -6,7 +7,9 @@ export type PresetCategory =
   | "くらし・ごはん"
   | "人との関係"
   | "学び・すこやか"
-  | "仕事・お金";
+  | "仕事・お金"
+  | "世界の名言"
+  | "世界のことわざ";
 
 export type Preset = {
   id: string;
@@ -24,7 +27,7 @@ export type Preset = {
  * list that changes once a day, so the page does not always open with the same
  * six examples.
  */
-export const PRESETS: Preset[] = [
+const EVERYDAY_PRESETS: Preset[] = [
   {
     id: "kyocera",
     category: "定番",
@@ -366,12 +369,17 @@ export const PRESETS: Preset[] = [
   },
 ];
 
+/** The everyday stock first, then the sayings collected from around the world. */
+export const PRESETS: Preset[] = [...EVERYDAY_PRESETS, ...QUOTE_PRESETS];
+
 export const PRESET_CATEGORIES: PresetCategory[] = [
   "定番",
   "くらし・ごはん",
   "人との関係",
   "学び・すこやか",
   "仕事・お金",
+  "世界の名言",
+  "世界のことわざ",
 ];
 
 /** How many presets 「今日のテンプレート」 shows at a time. */
@@ -468,25 +476,40 @@ export function presetFromWords(theme: PresetTheme, picked: number[]): Preset {
  * Deterministic pick: everyone opening the page on the same day sees the same
  * set, and it rotates at midnight without any server call. `round` lets the
  * reader ask for another batch without leaving the day's seed behind.
+ *
+ * The sayings outnumber the everyday equations several times over, so the two
+ * stocks are drawn in turn instead of from one pile: a batch keeps roughly half
+ * everyday equations however many quotes are added later.
  */
 export function dailyPresets(
   seed: string,
   count = DAILY_PRESET_COUNT,
   round = 0,
 ): Preset[] {
-  const sources: (Preset | PresetTheme)[] = [...PRESETS, ...PRESET_THEMES];
   let state = hash(`${seed}#${round}`) || 1;
   const next = () => {
     state = (Math.imul(state, 48271) % 2147483647) >>> 0;
     return state;
   };
-  for (let i = sources.length - 1; i > 0; i -= 1) {
-    const j = next() % (i + 1);
-    [sources[i], sources[j]] = [sources[j], sources[i]];
+  const shuffled = (input: (Preset | PresetTheme)[]) => {
+    const list = [...input];
+    for (let i = list.length - 1; i > 0; i -= 1) {
+      const j = next() % (i + 1);
+      [list[i], list[j]] = [list[j], list[i]];
+    }
+    return list;
+  };
+  const everyday = shuffled([...EVERYDAY_PRESETS, ...PRESET_THEMES]);
+  const sayings = shuffled(QUOTE_PRESETS);
+  const picked: (Preset | PresetTheme)[] = [];
+  while (picked.length < count && (everyday.length > 0 || sayings.length > 0)) {
+    const primary = picked.length % 2 === 0 ? everyday : sayings;
+    const fallback = primary === everyday ? sayings : everyday;
+    const source = (primary.length > 0 ? primary : fallback).shift();
+    if (!source) break;
+    picked.push(source);
   }
-  return sources
-    .slice(0, count)
-    .map((source) =>
-      "pool" in source ? presetFromTheme(source, next() % themeVariations(source)) : source,
-    );
+  return picked.map((source) =>
+    "pool" in source ? presetFromTheme(source, next() % themeVariations(source)) : source,
+  );
 }

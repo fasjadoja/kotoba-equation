@@ -1,6 +1,18 @@
-import { getSize, type FormulaConfig } from "./types";
+import {
+  CLOSE_BRACKET,
+  OPEN_BRACKET,
+  TEXT_SCALE,
+  getSize,
+  type FormulaConfig,
+  type FormulaElement,
+} from "./types";
 import { getTheme } from "./themes";
-import { drawLogoMark } from "./logo";
+import {
+  MARK_ASPECT,
+  SUPPORTER_INK,
+  drawLogoMark,
+  supporterGradient,
+} from "./logo";
 
 export const SYSTEM_STACK =
   '-apple-system, "Hiragino Sans", "Yu Gothic", "Noto Sans JP", sans-serif';
@@ -15,7 +27,8 @@ const NO_LINE_START = new Set(
 
 const NO_LINE_END = new Set("（【『「〈《“‘([{".split(""));
 
-type Part = { text: string; color: string };
+/** `gap` is the space in front of the part, as a multiple of the base gap. */
+type Part = { text: string; color: string; gap: number };
 type Line = { parts: Part[]; width: number };
 
 export type RenderOptions = {
@@ -36,6 +49,17 @@ export const SYSTEM_OPTIONS: RenderOptions = {
 function font(weight: string, size: number, stack: string) {
   return `${weight} ${size}px ${stack}`;
 }
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+/**
+ * Smallest formula size, relative to the canvas, that is still worth keeping on
+ * one line. Below it a tall canvas would show a thin ribbon of tiny text, so
+ * the stacked layout wins instead.
+ */
+const MIN_INLINE_RATIO = 0.06;
 
 /** Character-level wrapping with basic Japanese kinsoku handling. */
 function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
@@ -91,9 +115,15 @@ function fillTracked(
 
 function groupWidth(ctx: CanvasRenderingContext2D, group: Part[], gap: number): number {
   return group.reduce(
-    (acc, part, index) => acc + ctx.measureText(part.text).width + (index > 0 ? gap : 0),
+    (acc, part, index) =>
+      acc + ctx.measureText(part.text).width + (index > 0 ? gap * part.gap : 0),
     0,
   );
+}
+
+/** Space in front of a group when it follows another group on the same line. */
+function leadingGap(group: Part[]): number {
+  return group.length > 0 ? group[0].gap : 1;
 }
 
 /**
@@ -106,17 +136,21 @@ function packGroups(
   groups: Part[][],
   maxWidth: number,
   gap: number,
-): Line[] {
+): { lines: Line[]; broken: boolean } {
   const fitting: Part[][] = [];
+  let broken = false;
   for (const group of groups) {
     if (groupWidth(ctx, group, gap) <= maxWidth) {
       fitting.push(group);
       continue;
     }
+    broken = true;
     const [head, ...rest] = group;
     const operand = rest.length > 0 ? rest[rest.length - 1] : head;
     const operator = rest.length > 0 ? head : null;
-    const operatorWidth = operator ? ctx.measureText(operator.text).width + gap : 0;
+    const operatorWidth = operator
+      ? ctx.measureText(operator.text).width + gap * operand.gap
+      : 0;
     const chunks = wrapText(ctx, operand.text, maxWidth - operatorWidth);
     chunks.forEach((chunk, index) => {
       const parts: Part[] = [];
@@ -132,7 +166,8 @@ function packGroups(
 
   for (const group of fitting) {
     const width = groupWidth(ctx, group, gap);
-    const additional = currentParts.length === 0 ? width : gap + width;
+    const additional =
+      currentParts.length === 0 ? width : gap * leadingGap(group) + width;
     if (currentParts.length > 0 && currentWidth + additional > maxWidth) {
       lines.push({ parts: currentParts, width: currentWidth });
       currentParts = [...group];
@@ -144,7 +179,7 @@ function packGroups(
   }
 
   if (currentParts.length > 0) lines.push({ parts: currentParts, width: currentWidth });
-  return lines;
+  return { lines, broken };
 }
 
 type Block =
@@ -155,6 +190,8 @@ type Block =
       weight: string;
       color: string;
       lineHeight: number;
+      /** Captions may re-wrap freely; the formula may not. */
+      soft?: boolean;
     }
   | { kind: "formula"; lines: Line[]; size: number; gap: number; lineHeight: number };
 
@@ -168,11 +205,65 @@ function contentLength(config: FormulaConfig): number {
   ).length;
 }
 
-/** 「1 ＜ 2」 style formulas read better on one line than stacked. */
-export function isInline(config: FormulaConfig): boolean {
+/**
+ * Brackets sit tight against the term they belong to, every other operator
+ * keeps a full gap on both sides.
+ */
+function elementParts(
+  element: FormulaElement,
+  index: number,
+  colors: { element: string; operator: string },
+): Part[] {
+  const op = index === 0 ? element.op : element.op || "×";
+  const text = element.text.trim();
+  if (!op) return [{ text: text || "———", color: colors.element, gap: 1 }];
+
+  const open = op === OPEN_BRACKET;
+  const close = op === CLOSE_BRACKET;
+  const parts: Part[] = [
+    {
+      text: op,
+      color: open || close ? colors.element : colors.operator,
+      gap: close ? 0 : 1,
+    },
+  ];
+  if (text) parts.push({ text, color: colors.element, gap: open ? 0 : 1 });
+  return parts;
+}
+
+function inlineGroups(config: FormulaConfig): Part[][] {
+  const theme = getTheme(config.themeId);
+  const colors = { element: theme.element, operator: theme.operator };
+  return [
+    [{ text: config.resultText || "成果", color: theme.title, gap: 1 }],
+    ...config.elements.map((element, index) => {
+      const parts = elementParts(element, index, colors);
+      if (index > 0) return parts;
+      return [
+        { text: config.relation || "＝", color: theme.operator, gap: 1 },
+        ...parts,
+      ];
+    }),
+  ];
+}
+
+/**
+ * A formula on one straight line always looks better, so "auto" only stacks
+ * when the whole expression cannot fit on a single line at a readable size.
+ */
+export function resolveInline(
+  ctx: CanvasRenderingContext2D,
+  config: FormulaConfig,
+  options: RenderOptions,
+  contentWidth: number,
+  unit: number,
+): boolean {
   if (config.layoutId === "inline") return true;
   if (config.layoutId === "stack") return false;
-  return config.elements.length === 1 && contentLength(config) <= 12;
+  const size = 46 * unit;
+  ctx.font = font(options.strongWeight, size, options.fontStack);
+  const packed = packGroups(ctx, inlineGroups(config), contentWidth, size * 0.34);
+  return packed.lines.length === 1 && !packed.broken;
 }
 
 function buildBlocks(
@@ -182,33 +273,29 @@ function buildBlocks(
   contentWidth: number,
   unit: number,
   baseUnit: number,
-): { blocks: Block[]; height: number } {
+  inline: boolean,
+): { blocks: Block[]; height: number; broken: boolean } {
   const theme = getTheme(config.themeId);
   const { fontStack, strongWeight, normalWeight } = options;
   const blocks: Block[] = [];
+  let broken = false;
 
   const relation = config.relation || "＝";
   const result = config.resultText || "成果";
   const elementGroups = (): Part[][] =>
-    config.elements.map((element, index) => {
-      const operand: Part = { text: element.text || "———", color: theme.element };
-      if (index === 0) return [operand];
-      return [{ text: element.op || "×", color: theme.operator }, operand];
-    });
+    config.elements.map((element, index) =>
+      elementParts(element, index, { element: theme.element, operator: theme.operator }),
+    );
 
-  if (isInline(config)) {
+  if (inline) {
     const inlineSize = 46 * unit;
     ctx.font = font(strongWeight, inlineSize, fontStack);
     const gap = inlineSize * 0.34;
-    const groups: Part[][] = [
-      [{ text: result, color: theme.title }],
-      ...elementGroups().map((group, index) =>
-        index === 0 ? [{ text: relation, color: theme.operator }, ...group] : group,
-      ),
-    ];
+    const packed = packGroups(ctx, inlineGroups(config), contentWidth, gap);
+    broken = broken || packed.broken;
     blocks.push({
       kind: "formula",
-      lines: packGroups(ctx, groups, contentWidth, gap),
+      lines: packed.lines,
       size: inlineSize,
       gap,
       lineHeight: inlineSize * 1.42,
@@ -238,9 +325,11 @@ function buildBlocks(
     const formulaSize = 44 * unit;
     ctx.font = font(strongWeight, formulaSize, fontStack);
     const gap = formulaSize * 0.38;
+    const packed = packGroups(ctx, elementGroups(), contentWidth, gap);
+    broken = broken || packed.broken;
     blocks.push({
       kind: "formula",
-      lines: packGroups(ctx, elementGroups(), contentWidth, gap),
+      lines: packed.lines,
       size: formulaSize,
       gap,
       lineHeight: formulaSize * 1.46,
@@ -248,7 +337,11 @@ function buildBlocks(
   }
 
   if (config.subNote) {
-    const noteSize = Math.max(19 * baseUnit, 19 * unit);
+    // Long notes (up to 140 characters) are set smaller so they stay a caption
+    // instead of competing with the formula.
+    const length = Array.from(config.subNote).length;
+    const noteScale = length <= 56 ? 19 : length <= 100 ? 16.5 : 14.5;
+    const noteSize = Math.max(noteScale * baseUnit, noteScale * unit);
     ctx.font = font(normalWeight, noteSize, fontStack);
     blocks.push({
       kind: "text",
@@ -256,13 +349,14 @@ function buildBlocks(
       size: noteSize,
       weight: normalWeight,
       color: theme.note,
-      lineHeight: noteSize * 1.7,
+      soft: true,
+      lineHeight: noteSize * (length <= 56 ? 1.7 : 1.55),
     });
   }
 
   const gaps = (blocks.length - 1) * 16 * unit;
   const height = blocks.reduce((acc, block) => acc + blockHeight(block), 0) + gaps;
-  return { blocks, height };
+  return { blocks, height, broken };
 }
 
 /** Faint dot grid inside the frame: the print-like texture of the brand. */
@@ -284,6 +378,15 @@ function drawDotGrid(
       ctx.fill();
     }
   }
+}
+
+/** Normalises the free-form hashtag field into a single "#a #b" line. */
+export function hashtagText(config: FormulaConfig): string {
+  return config.hashtags
+    .split(/[\s、,]+/)
+    .filter(Boolean)
+    .map((tag) => (tag.startsWith("#") || tag.startsWith("＃") ? tag : `#${tag}`))
+    .join(" ");
 }
 
 export function creditText(config: FormulaConfig): string {
@@ -313,7 +416,8 @@ export function drawFormula(
   ctx.lineWidth = Math.max(1, base);
   ctx.strokeRect(inset + 0.5, inset + 0.5, width - inset * 2 - 1, height - inset * 2 - 1);
 
-  const marginX = Math.round(width * 0.11);
+  const marginRatio = clamp(0.11 * (config.marginScale || 1), 0.05, 0.2);
+  const marginX = Math.round(width * marginRatio);
   const contentWidth = width - marginX * 2;
   const edge = Math.round(Math.min(width, height) * 0.055);
   const headerY = inset + edge;
@@ -321,35 +425,78 @@ export function drawFormula(
 
   ctx.textBaseline = "middle";
   if (config.showWatermark) {
-    const markSize = 20 * base;
-    drawLogoMark(ctx, marginX, headerY - markSize / 2, markSize, theme.accent, theme.onAccent);
+    const markWidth = 30 * base;
+    const markHeight = markWidth / MARK_ASPECT;
+    const markY = headerY - markHeight / 2;
+    const premium = config.premiumLogo;
+    drawLogoMark(
+      ctx,
+      marginX,
+      markY,
+      markWidth,
+      premium
+        ? supporterGradient(ctx, marginX, markY, markWidth, markHeight)
+        : undefined,
+    );
     ctx.textAlign = "left";
-    ctx.fillStyle = theme.brand;
+    ctx.fillStyle = premium ? SUPPORTER_INK : theme.brand;
     ctx.font = font(normalWeight, 13 * base, fontStack);
-    fillTracked(ctx, WORDMARK, marginX + markSize + 8 * base, headerY, 1.2 * base);
+    const wordX = marginX + markWidth + 9 * base;
+    fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
+    if (premium) {
+      const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
+      ctx.font = font(normalWeight, 9.5 * base, fontStack);
+      fillTracked(
+        ctx,
+        "✦ SUPPORTER",
+        wordX + wordWidth + 9 * base,
+        headerY,
+        1.6 * base,
+      );
+    }
   }
 
   const availableTop = headerY + 34 * base;
   const availableBottom = footerY - 34 * base;
   const availableHeight = availableBottom - availableTop;
 
-  let unit = base;
-  let layout = buildBlocks(ctx, config, options, contentWidth, unit, base);
-  while (layout.height > availableHeight && unit > base * 0.22) {
+  // Single line first: "auto" only stacks when one line would become too small.
+  const inlineFloor = (MIN_INLINE_RATIO * Math.sqrt(width * height)) / 46;
+  const inline = resolveInline(ctx, config, options, contentWidth, inlineFloor);
+  const scale = clamp(config.textScale || 1, TEXT_SCALE.min, TEXT_SCALE.max);
+  const build = (value: number) =>
+    buildBlocks(ctx, config, options, contentWidth, value, base, inline);
+
+  let unit = base * scale;
+  let layout = build(unit);
+  // Only the formula itself must stay on one line; the caption may wrap.
+  const wraps = (candidate: typeof layout) =>
+    inline &&
+    candidate.blocks.some((block) => block.kind === "formula" && block.lines.length > 1);
+  while (
+    (layout.height > availableHeight || (wraps(layout) && unit > inlineFloor)) &&
+    unit > base * 0.22
+  ) {
     unit -= base * 0.02;
-    layout = buildBlocks(ctx, config, options, contentWidth, unit, base);
+    layout = build(unit);
   }
   // Tall formats (1:1, 4:5, 9:16) leave a lot of vertical room; scale the block
   // up so the composition keeps the same optical weight as the 16:9 output.
   const ratio = height / width;
   // A handful of characters on one line would otherwise float in a large empty
   // canvas, so short inline formulas are allowed to grow further.
-  const compact = isInline(config) && contentLength(config) <= 10 ? 1.8 : 1;
+  const compact = inline && contentLength(config) <= 10 ? 1.8 : 1;
   const maxUnit =
-    base * (ratio >= 1.6 ? 2.4 : ratio >= 1.25 ? 1.9 : ratio >= 0.95 ? 1.6 : 1) * compact;
+    base *
+    (ratio >= 1.6 ? 2.4 : ratio >= 1.25 ? 1.9 : ratio >= 0.95 ? 1.6 : 1) *
+    compact *
+    scale;
   while (unit < maxUnit) {
-    const next = buildBlocks(ctx, config, options, contentWidth, unit + base * 0.02, base);
+    const next = build(unit + base * 0.02);
     if (next.height > availableHeight * 0.72) break;
+    // Growing may wrap between operands, but never inside one.
+    if (next.broken && !layout.broken) break;
+    if (wraps(next) && !wraps(layout)) break;
     unit += base * 0.02;
     layout = next;
   }
@@ -376,7 +523,7 @@ export function drawFormula(
     block.lines.forEach((line) => {
       let x = (width - line.width) / 2;
       line.parts.forEach((part, partIndex) => {
-        if (partIndex > 0) x += block.gap;
+        if (partIndex > 0) x += block.gap * part.gap;
         ctx.fillStyle = part.color;
         ctx.fillText(part.text, x, y + block.lineHeight / 2);
         x += ctx.measureText(part.text).width;
@@ -385,16 +532,42 @@ export function drawFormula(
     });
   });
 
+  const footerSize = 15 * base;
+  const tracking = 1.2 * base;
+  ctx.font = font(normalWeight, footerSize, fontStack);
+  ctx.textAlign = "left";
+
   const credit = creditText(config);
+  let creditWidth = 0;
   if (credit) {
-    const creditSize = 15 * base;
-    const tracking = 1.2 * base;
-    ctx.font = font(normalWeight, creditSize, fontStack);
-    ctx.fillStyle = theme.author;
-    ctx.textAlign = "left";
-    const [firstLine] = wrapText(ctx, credit, contentWidth);
+    // A long credit (up to 50 characters) is set smaller instead of being cut
+    // off, so it never runs into the hashtags on the other side.
+    const room = contentWidth * 0.58;
+    let creditSize = footerSize;
+    let creditTracking = tracking;
+    while (
+      trackedWidth(ctx, credit, creditTracking) > room &&
+      creditSize > footerSize * 0.62
+    ) {
+      creditSize -= 0.4 * base;
+      creditTracking = tracking * 0.6;
+      ctx.font = font(normalWeight, creditSize, fontStack);
+    }
+    const [firstLine] = wrapText(ctx, credit, room);
     const text = firstLine ?? credit;
-    fillTracked(ctx, text, width - marginX - trackedWidth(ctx, text, tracking), footerY, tracking);
+    creditWidth = trackedWidth(ctx, text, creditTracking);
+    ctx.fillStyle = theme.author;
+    fillTracked(ctx, text, width - marginX - creditWidth, footerY, creditTracking);
+    ctx.font = font(normalWeight, footerSize, fontStack);
+  }
+
+  const hashtags = hashtagText(config);
+  if (hashtags) {
+    const room = contentWidth - (creditWidth > 0 ? creditWidth + 24 * base : 0);
+    const [firstLine] = wrapText(ctx, hashtags, room);
+    const text = firstLine ?? hashtags;
+    ctx.fillStyle = theme.hashtag;
+    fillTracked(ctx, text, marginX, footerY, tracking * 0.6);
   }
 }
 

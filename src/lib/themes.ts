@@ -5,16 +5,16 @@ export type Theme = {
   frame: string;
   /** Wordmark text next to the logo mark. */
   brand: string;
-  /** Logo mark fill and any brand-colored detail. */
+  /** Brand-colored detail such as the relation glyph. */
   accent: string;
-  /** Glyph drawn inside the logo mark. */
-  onAccent: string;
   /** Dot grid printed behind the composition. */
   grid: string;
   title: string;
   element: string;
   operator: string;
   note: string;
+  /** Hashtag line printed at the bottom left. */
+  hashtag: string;
   author: string;
   swatch: string;
 };
@@ -24,49 +24,49 @@ export const THEMES: Theme[] = [
     id: "light",
     name: "Paper",
     background: "#FFFFFF",
-    frame: "#E7EAF2",
-    brand: "#96A0B2",
-    accent: "#2B4EE6",
-    onAccent: "#FFFFFF",
-    grid: "#EEF1F8",
-    title: "#0F1524",
-    element: "#0F1524",
-    operator: "#6C7BE0",
-    note: "#5B6472",
-    author: "#96A0B2",
+    frame: "#E5E9EE",
+    brand: "#98A2AE",
+    accent: "#0B6BCB",
+    grid: "#ECEFF4",
+    title: "#131820",
+    element: "#131820",
+    operator: "#1478DC",
+    note: "#5C6672",
+    hashtag: "#9AA3AF",
+    author: "#98A2AE",
     swatch: "#FFFFFF",
   },
   {
     id: "slate",
     name: "Mist",
-    background: "#F3F5FA",
-    frame: "#E0E5F0",
-    brand: "#8A94A6",
-    accent: "#2B4EE6",
-    onAccent: "#FFFFFF",
-    grid: "#E7EBF5",
-    title: "#131A2A",
-    element: "#131A2A",
-    operator: "#6C7BE0",
-    note: "#5A6474",
-    author: "#8A94A6",
-    swatch: "#F3F5FA",
+    background: "#F1F4F8",
+    frame: "#DFE4EB",
+    brand: "#8C94A0",
+    accent: "#0B6BCB",
+    grid: "#E6EAF0",
+    title: "#151B23",
+    element: "#151B23",
+    operator: "#1478DC",
+    note: "#58636F",
+    hashtag: "#909aa6",
+    author: "#8C94A0",
+    swatch: "#F1F4F8",
   },
   {
     id: "dark",
     name: "Ink",
-    background: "#101728",
-    frame: "#26314A",
-    brand: "#7C89A6",
-    accent: "#6C8CFF",
-    onAccent: "#101728",
-    grid: "#182137",
-    title: "#F3F6FC",
-    element: "#F3F6FC",
-    operator: "#8FA4FF",
-    note: "#A9B4C9",
-    author: "#7C89A6",
-    swatch: "#101728",
+    background: "#111722",
+    frame: "#2A3242",
+    brand: "#7E8896",
+    accent: "#4B9BFF",
+    grid: "#1A2130",
+    title: "#F2F4F8",
+    element: "#F2F4F8",
+    operator: "#68AEFF",
+    note: "#A7B0BE",
+    hashtag: "#7E8896",
+    author: "#7E8896",
+    swatch: "#111722",
   },
 ];
 

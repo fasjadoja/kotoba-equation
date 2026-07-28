@@ -4,7 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { FormulaConfig } from "@/lib/types";
 
 const STORAGE_KEY = "formula-studio.history";
-const MAX_ITEMS = 5;
+/** Recent formulas double as personal templates, so a few more are useful. */
+export const HISTORY_LIMIT = 8;
 
 export type HistoryEntry = {
   id: string;
@@ -13,6 +14,7 @@ export type HistoryEntry = {
   relation: string;
   elements: FormulaConfig["elements"];
   subNote: string;
+  hashtags: string;
   author: string;
 };
 
@@ -37,6 +39,7 @@ function toEntry(value: unknown): HistoryEntry | null {
     relation: typeof entry.relation === "string" && entry.relation ? entry.relation : "＝",
     elements: entry.elements.map((element) => ({ ...element })),
     subNote: entry.subNote,
+    hashtags: typeof entry.hashtags === "string" ? entry.hashtags : "",
     author: entry.author,
   };
 }
@@ -50,7 +53,7 @@ function read(): HistoryEntry[] {
     return parsed
       .map(toEntry)
       .filter((entry): entry is HistoryEntry => entry !== null)
-      .slice(0, MAX_ITEMS);
+      .slice(0, HISTORY_LIMIT);
   } catch {
     return [];
   }
@@ -77,13 +80,14 @@ export function useHistory() {
       relation: config.relation,
       elements: config.elements.map((element) => ({ ...element })),
       subNote: config.subNote,
+      hashtags: config.hashtags,
       author: config.author,
     };
     setEntries((previous) => {
       const key = summarize(entry);
       const next = [entry, ...previous.filter((item) => summarize(item) !== key)].slice(
         0,
-        MAX_ITEMS,
+        HISTORY_LIMIT,
       );
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       return next;

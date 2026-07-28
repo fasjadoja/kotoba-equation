@@ -6,7 +6,6 @@ import {
   type FormulaConfig,
   type FormulaElement,
 } from "./types";
-import { SITE } from "./site";
 import { getTheme } from "./themes";
 import {
   MARK_ASPECT,
@@ -21,7 +20,6 @@ export const SYSTEM_STACK =
 export const WORDMARK = "ことばの方程式";
 
 /** Printed after the wordmark so a reposted image still names where it came from. */
-export const SITE_LABEL = SITE.url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 
 const NO_LINE_START = new Set(
   "、。，．・：；！？）】』」〉》”’ゝゞーぁぃぅぇぉっゃゅょゎヵヶァィゥェォッャュョヮ!?),.:;]}".split(
@@ -394,9 +392,6 @@ export function drawFormula(
   ctx.fillRect(0, 0, width, height);
 
   const inset = Math.round(Math.min(width, height) * 0.05);
-  ctx.strokeStyle = theme.frame;
-  ctx.lineWidth = Math.max(1, base);
-  ctx.strokeRect(inset + 0.5, inset + 0.5, width - inset * 2 - 1, height - inset * 2 - 1);
 
   const marginRatio = clamp(0.11 * (config.marginScale || 1), 0.05, 0.2);
   const marginX = Math.round(width * marginRatio);
@@ -425,16 +420,11 @@ export function drawFormula(
     ctx.font = font(normalWeight, 13 * base, fontStack);
     const wordX = marginX + markWidth + 9 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
-    const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
-    ctx.font = font(normalWeight, 9.5 * base, fontStack);
-    if (!premium) ctx.fillStyle = theme.hashtag;
-    fillTracked(
-      ctx,
-      premium ? "✦ SUPPORTER" : SITE_LABEL,
-      wordX + wordWidth + 9 * base,
-      headerY,
-      1.6 * base,
-    );
+    if (premium) {
+      const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
+      ctx.font = font(normalWeight, 9.5 * base, fontStack);
+      fillTracked(ctx, "✦ SUPPORTER", wordX + wordWidth + 9 * base, headerY, 1.6 * base);
+    }
   }
 
   const availableTop = headerY + 34 * base;

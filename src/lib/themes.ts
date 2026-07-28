@@ -2,7 +2,6 @@ export type Theme = {
   id: string;
   name: string;
   background: string;
-  frame: string;
   /** Wordmark text next to the logo mark. */
   brand: string;
   /** Brand-colored detail such as the relation glyph. */
@@ -22,7 +21,6 @@ export const THEMES: Theme[] = [
     id: "light",
     name: "Paper",
     background: "#FFFFFF",
-    frame: "#E5E9EE",
     brand: "#98A2AE",
     accent: "#0B6BCB",
     title: "#131820",
@@ -37,7 +35,6 @@ export const THEMES: Theme[] = [
     id: "slate",
     name: "Mist",
     background: "#F1F4F8",
-    frame: "#DFE4EB",
     brand: "#8C94A0",
     accent: "#0B6BCB",
     title: "#151B23",
@@ -52,7 +49,6 @@ export const THEMES: Theme[] = [
     id: "dark",
     name: "Ink",
     background: "#111722",
-    frame: "#2A3242",
     brand: "#7E8896",
     accent: "#4B9BFF",
     title: "#F2F4F8",

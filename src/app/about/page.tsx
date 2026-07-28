@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
+import { donateButtonClass } from "@/components/DonateButton";
 import { LogoMark } from "@/components/Logo";
 import { SITE, SOCIAL } from "@/lib/site";
 
@@ -82,7 +82,6 @@ export default function AboutPage() {
             rel="noopener noreferrer"
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
-            <CoffeeIcon />
             500円を寄付する
           </a>
         )}

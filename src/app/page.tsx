@@ -2,7 +2,7 @@ import Link from "next/link";
 import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
-import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
+import { donateButtonClass } from "@/components/DonateButton";
 import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
 import { SITE, SOCIAL } from "@/lib/site";
 
@@ -200,7 +200,6 @@ export default function Home() {
               rel="noopener noreferrer"
               className={`${donateButtonClass} shrink-0 px-6 py-3.5 text-[14px]`}
             >
-              <CoffeeIcon size={17} />
               500円を寄付する
             </a>
           </section>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "./Logo";
-import { CoffeeIcon, donateButtonClass } from "./DonateButton";
+import { donateButtonClass } from "./DonateButton";
 import { SITE } from "@/lib/site";
 
 /** Condenses and lifts the bar once the page scrolls away from the top. */
@@ -37,7 +37,6 @@ export default function SiteHeader() {
             rel="noopener noreferrer"
             className={`${donateButtonClass} px-4 py-2 text-[12px]`}
           >
-            <CoffeeIcon />
             寄付する
           </a>
         )}

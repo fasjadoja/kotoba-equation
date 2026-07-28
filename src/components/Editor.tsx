@@ -151,6 +151,7 @@ export default function Editor() {
   const [presetRound, setPresetRound] = useState(0);
   const [query, setQuery] = useState("");
   const [showLeadOp, setShowLeadOp] = useState(false);
+  const [pinActions, setPinActions] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const gallery = useGallery();
@@ -869,29 +870,48 @@ export default function Editor() {
               className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 sm:max-h-[42vh] lg:max-h-[58vh]"
             />
           </div>
-          {/* The preview stays pinned while scrolling, so saving is always one
-              tap away on a phone. */}
-          <div className="flex items-center gap-2 border-t border-line px-3 py-2 lg:hidden">
-            {canCopy && (
+          {/* The pinned preview is the point of this card on a phone, so the
+              buttons stay folded until someone asks for them. */}
+          <div className="border-t border-line px-3 py-1.5 lg:hidden">
+            {pinActions ? (
+              <div className="flex items-center gap-2">
+                {canCopy && (
+                  <button
+                    onClick={() => void handleCopy()}
+                    className={`${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`}
+                  >
+                    <CopyIcon size={14} />
+                    画像をコピー
+                  </button>
+                )}
+                <button
+                  onClick={() => void handleDownload()}
+                  className={
+                    canCopy
+                      ? `${secondaryButtonClass} shrink-0 px-3 py-2 text-[12px]`
+                      : `${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`
+                  }
+                >
+                  <SaveIcon size={14} />
+                  PNGで保存
+                </button>
+                <button
+                  onClick={() => setPinActions(false)}
+                  aria-label="ボタンをたたむ"
+                  className="shrink-0 rounded-md px-2 py-2 text-[12px] text-faint transition hover:text-accent"
+                >
+                  ▲
+                </button>
+              </div>
+            ) : (
               <button
-                onClick={() => void handleCopy()}
-                className={`${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`}
+                onClick={() => setPinActions(true)}
+                aria-expanded={false}
+                className="w-full rounded-md py-1 text-[11px] font-medium text-muted transition hover:text-accent"
               >
-                <CopyIcon size={14} />
-                画像をコピー
+                保存・コピーのボタンを出す ▼
               </button>
             )}
-            <button
-              onClick={() => void handleDownload()}
-              className={
-                canCopy
-                  ? `${secondaryButtonClass} shrink-0 px-3 py-2 text-[12px]`
-                  : `${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`
-              }
-            >
-              <SaveIcon size={14} />
-              PNGで保存
-            </button>
           </div>
         </div>
       </div>

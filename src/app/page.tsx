@@ -2,7 +2,26 @@ import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
 import { CoffeeIcon, donateButtonClass } from "@/components/DonateButton";
+import { BoltIcon, FreeIcon, ShieldIcon } from "@/components/icons";
 import { SITE } from "@/lib/site";
+
+const POINTS = [
+  {
+    icon: <BoltIcon size={17} />,
+    title: "入力するとすぐ反映",
+    body: "打ち込んだそばからプレビューが変わります。書き出しはワンタップ。",
+  },
+  {
+    icon: <ShieldIcon size={17} />,
+    title: "入力はこの端末だけ",
+    body: "画像の生成も履歴もブラウザ内で完結。公開を選んだときだけ共有されます。",
+  },
+  {
+    icon: <FreeIcon size={17} />,
+    title: "無料・商用OK",
+    body: "回数制限も透かしの強制もなし。SNSでも資料でも自由に使えます。",
+  },
+];
 
 const FAQ = [
   {
@@ -94,6 +113,27 @@ export default function Home() {
             「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も、スマホに合うサイズの1枚に。
           </p>
         </div>
+
+        <ul className="mx-auto mb-6 grid max-w-3xl gap-2 sm:grid-cols-3">
+          {POINTS.map((point) => (
+            <li
+              key={point.title}
+              className="flex items-start gap-2.5 rounded-xl border border-line bg-panel/70 px-3 py-2.5 shadow-sm"
+            >
+              <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
+                {point.icon}
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12px] font-semibold text-fg">
+                  {point.title}
+                </span>
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted">
+                  {point.body}
+                </span>
+              </span>
+            </li>
+          ))}
+        </ul>
 
         <Editor />
 

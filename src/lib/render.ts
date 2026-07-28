@@ -416,7 +416,7 @@ export function drawFormula(
 
   ctx.textBaseline = "middle";
   if (config.showWatermark) {
-    const markWidth = 30 * base;
+    const markWidth = 46 * base;
     const markHeight = markWidth / MARK_ASPECT;
     const markY = headerY - markHeight / 2;
     const rank = config.logoRank === "brand" ? null : config.logoRank;
@@ -430,13 +430,13 @@ export function drawFormula(
     );
     ctx.textAlign = "left";
     ctx.fillStyle = style ? style.ink : theme.brand;
-    ctx.font = font(normalWeight, 13 * base, fontStack);
-    const wordX = marginX + markWidth + 9 * base;
+    ctx.font = font(normalWeight, 19 * base, fontStack);
+    const wordX = marginX + markWidth + 11 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
     if (style) {
       const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
-      ctx.font = font(normalWeight, 9.5 * base, fontStack);
-      fillTracked(ctx, style.badge, wordX + wordWidth + 9 * base, headerY, 1.6 * base);
+      ctx.font = font(normalWeight, 12 * base, fontStack);
+      fillTracked(ctx, style.badge, wordX + wordWidth + 11 * base, headerY, 1.6 * base);
     }
   }
 

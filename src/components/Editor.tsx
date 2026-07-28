@@ -155,6 +155,8 @@ export default function Editor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { entries, save, clear, summarize } = useHistory();
   const supporter = useSupporter();
+  const unlockedRank = supporter.rank;
+  const unlockRule = supporter.rule;
 
   const adoptConfig = useCallback((next: FormulaConfig) => {
     setConfig(next);
@@ -229,30 +231,43 @@ export default function Editor() {
 
   useEffect(() => remember(config), [config, remember]);
 
-  // The gold lockup is only offered while the supporter window is open.
+  // A donor lockup only stays selected while that exact rank is unlocked, so
+  // it disappears on its own once the days or the images run out.
   useEffect(() => {
-    if (!supporter.active && config.premiumLogo) update({ premiumLogo: false });
-  }, [supporter.active, config.premiumLogo, update]);
+    if (config.logoRank !== "brand" && supporter.rank !== config.logoRank) {
+      update({ logoRank: "brand" });
+    }
+  }, [supporter.rank, config.logoRank, update]);
 
+  // Clears what was typed and leaves the design choices (size, colours, font)
+  // alone, so the button always does something visible.
   const resetAll = () => {
     adoptConfig({
-      ...DEFAULT_CONFIG,
-      elements: DEFAULT_CONFIG.elements.map((element) => ({ ...element })),
+      ...config,
+      resultText: "",
+      relation: DEFAULT_CONFIG.relation,
+      elements: DEFAULT_CONFIG.elements.map((element) => ({
+        ...element,
+        text: "",
+      })),
+      subNote: "",
+      hashtags: "",
+      author: "",
+      showCopyright: false,
     });
+    setShowLeadOp(false);
     forget();
-    notify("入力を初期状態に戻しました");
+    notify("入力を空にしました");
   };
 
   // The button above the preview is easy to hit by accident, so it asks first
   // whenever there is something to lose.
   const confirmReset = () => {
     const hasInput =
-      config.resultText.trim() !== DEFAULT_CONFIG.resultText ||
-      config.elements.some(
-        (element, index) =>
-          element.text.trim() !== (DEFAULT_CONFIG.elements[index]?.text ?? ""),
-      );
-    if (hasInput && !window.confirm("入力した内容を消して、見本の式に戻しますか？")) {
+      !!config.resultText.trim() ||
+      config.elements.some((element) => !!element.text.trim()) ||
+      !!config.subNote.trim();
+    if (hasInput && !window.confirm("入力した内容をすべて消しますか？")) {
       return;
     }
     resetAll();
@@ -341,9 +356,10 @@ export default function Editor() {
     });
   };
 
-  /** History is the only side effect of exporting, and only when asked for. */
+  /** Runs once per exported image: history, and the count of donor lockups. */
   const commit = () => {
     if (keepHistory) save(config);
+    if (config.logoRank !== "brand") supporter.spend();
   };
 
   const downloadImage = async () => {
@@ -439,19 +455,24 @@ export default function Editor() {
 
   return (
     <>
-      {supporter.justUnlocked && (
+      {supporter.justUnlocked && supporter.rule && (
         <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#E4C97A] bg-[#FFF8E7] p-4 shadow-card">
           <span className="mt-0.5 text-[18px]" aria-hidden>
             ✦
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold text-[#7A5A10]">
-              ご支援ありがとうございます。サポーター限定のゴールドロゴを解錠しました。
+              ご支援ありがとうございます。寄付した方限定の「{supporter.rule.label}」を解錠しました。
             </p>
             <p className="mt-1 text-[12px] leading-relaxed text-[#8A6A1C]">
-              これから{Math.max(1, supporter.hoursLeft)}
-              時間のあいだ、⑥の「ゴールドのロゴにする」をONにすると、画像のロゴが金色（✦
-              SUPPORTER 付き）になります。設定はこのブラウザにだけ保存されます。
+              ⑥の「{supporter.rule.label}にする」をONにすると、画像のロゴが変わります。
+              {supporter.rule.exports === null
+                ? `これから${Math.max(1, supporter.hoursLeft)}時間のあいだ使えます。`
+                : `コピー・保存した画像${supporter.rule.exports}枚分まで、最長で${Math.max(
+                    1,
+                    Math.round(supporter.hoursLeft / 24),
+                  )}日間の限定です。`}
+              設定はこのブラウザにだけ保存されます。
             </p>
           </div>
           <button
@@ -799,16 +820,25 @@ export default function Editor() {
               onChange={(checked) => update({ showCopyright: checked })}
               label={`© 表記を付ける（© ${new Date().getFullYear()} ${config.author || "you"}）`}
             />
-            {supporter.active && (
+            {unlockedRank && unlockRule && (
               <>
                 <Toggle
-                  checked={config.premiumLogo}
-                  onChange={(checked) => update({ premiumLogo: checked })}
-                  label="ゴールドのロゴにする（サポーター限定）"
+                  checked={config.logoRank === unlockedRank}
+                  onChange={(checked) =>
+                    update({ logoRank: checked ? unlockedRank : "brand" })
+                  }
+                  label={`${unlockRule.label}にする（寄付した方限定）`}
+                  disabled={!config.showWatermark}
                 />
                 <p className="text-[11px] leading-snug text-[#8A6A1C]">
-                  ✦ 解錠中：あと約{supporter.hoursLeft}
-                  時間。ロゴが金色になり、「✦ SUPPORTER」が並びます。
+                  ✦ 解錠中：
+                  {supporter.left === null
+                    ? `あと約${supporter.hoursLeft}時間`
+                    : `のこり${supporter.left}枚（あと約${Math.max(
+                        1,
+                        Math.round(supporter.hoursLeft / 24),
+                      )}日）`}
+                  。書き出した画像の枚数ぶんだけ使えます。
                 </p>
               </>
             )}
@@ -1380,16 +1410,25 @@ function Toggle({
   checked,
   onChange,
   label,
+  disabled = false,
 }: {
   checked: boolean;
   onChange: (checked: boolean) => void;
   label: string;
+  disabled?: boolean;
 }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] text-fg transition hover:border-accent/70">
+    <label
+      className={`flex items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] transition ${
+        disabled
+          ? "cursor-not-allowed text-faint"
+          : "cursor-pointer text-fg hover:border-accent/70"
+      }`}
+    >
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}
         className="h-4 w-4 shrink-0 accent-accent"
       />

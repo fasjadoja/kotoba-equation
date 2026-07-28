@@ -15,6 +15,9 @@ import {
   DONATE_TIERS,
   SITE,
   SOCIAL,
+  UNLOCK_RULES,
+  UNLOCK_THRESHOLDS,
+  unlockDays,
 } from "@/lib/site";
 
 const POINTS = [
@@ -206,7 +209,7 @@ export default function Home() {
             <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
               広告も、ログインも、有料プランもありません。運営費は寄付だけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-5">
               {DONATE_TIERS.map((tier) => (
                 <a
                   key={tier.amount}
@@ -226,6 +229,11 @@ export default function Home() {
                     )}
                   </span>
                   <span className="text-[11px] font-normal opacity-80">{tier.note}</span>
+                  {tier.rank !== "supporter" && (
+                    <span className="text-[10px] font-medium opacity-70">
+                      ✦ {UNLOCK_RULES[tier.rank].label}
+                    </span>
+                  )}
                 </a>
               ))}
             </div>
@@ -241,11 +249,17 @@ export default function Home() {
             )}
             {DONATE_CUSTOM_URL && (
               <p className="mt-2 text-[11px] leading-relaxed text-faint">
-                金額はStripeの決済ページで、{DONATE_STEP}円の個数を変えて決められます（例：個数20で{(DONATE_STEP * 20).toLocaleString("ja-JP")}円）。
+                金額はStripeの決済ページで、{DONATE_STEP}円の個数を変えて決められます（例：個数20で{(DONATE_STEP * 20).toLocaleString("ja-JP")}円）。このリンクは金額にかかわらず{UNLOCK_RULES.supporter.label}になります。
               </p>
             )}
             <p className="mt-3 text-[11px] leading-relaxed text-faint">
-              決済はStripeのページで行われ、カード番号はこのサイトには届きません。支払い後にこのサイトへ戻ると、24時間だけ画像のロゴがゴールドになります。
+              決済はStripeのページで行われ、カード番号はこのサイトには届きません。支払い後にこのサイトへ戻ると、お礼として画像のロゴを変えられます。
+              {UNLOCK_THRESHOLDS.supporter.toLocaleString("ja-JP")}円以上で
+              {UNLOCK_RULES.supporter.label}（{unlockDays("supporter") * 24}時間・枚数の制限なし）。
+              {UNLOCK_THRESHOLDS.premium.toLocaleString("ja-JP")}円以上の
+              {UNLOCK_RULES.premium.label}と、
+              {UNLOCK_THRESHOLDS.elite.toLocaleString("ja-JP")}円以上の
+              {UNLOCK_RULES.elite.label}は、書き出した画像{UNLOCK_RULES.premium.exports}枚分・{unlockDays("premium")}日間だけの一時的なお礼で、そのあとは自動で元のロゴに戻ります。
             </p>
           </section>
           </Reveal>

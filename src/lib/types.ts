@@ -63,6 +63,18 @@ export function isRecommendedSize(id: SizeId) {
   return id === RECOMMENDED_SIZE;
 }
 
+/**
+ * Which lockup is printed on the image. Everything above "brand" is unlocked
+ * by a donation and lasts only for a few images.
+ */
+export type LogoRank = "brand" | "supporter" | "premium" | "elite";
+
+export const LOGO_RANKS: LogoRank[] = ["brand", "supporter", "premium", "elite"];
+
+export function isLogoRank(value: unknown): value is LogoRank {
+  return LOGO_RANKS.includes(value as LogoRank);
+}
+
 export type FormulaConfig = {
   resultText: string;
   relation: string;
@@ -76,8 +88,8 @@ export type FormulaConfig = {
   fontId: "sans" | "mono";
   sizeId: SizeId;
   showWatermark: boolean;
-  /** Gold supporter lockup, unlocked for a day after a donation. */
-  premiumLogo: boolean;
+  /** Special lockup chosen by the donor; "brand" is the normal blue one. */
+  logoRank: LogoRank;
   /** Manual nudges on top of the automatic fitting. 1 = automatic. */
   textScale: number;
   marginScale: number;
@@ -115,7 +127,7 @@ export const DEFAULT_CONFIG: FormulaConfig = {
   fontId: "sans",
   sizeId: RECOMMENDED_SIZE,
   showWatermark: true,
-  premiumLogo: false,
+  logoRank: "brand",
   textScale: 1,
   marginScale: 1,
 };

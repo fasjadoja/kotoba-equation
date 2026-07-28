@@ -9,9 +9,9 @@ import {
 import { getTheme } from "./themes";
 import {
   MARK_ASPECT,
-  SUPPORTER_INK,
+  RANK_STYLES,
   drawLogoMark,
-  supporterGradient,
+  rankGradient,
 } from "./logo";
 
 export const SYSTEM_STACK =
@@ -419,25 +419,24 @@ export function drawFormula(
     const markWidth = 30 * base;
     const markHeight = markWidth / MARK_ASPECT;
     const markY = headerY - markHeight / 2;
-    const premium = config.premiumLogo;
+    const rank = config.logoRank === "brand" ? null : config.logoRank;
+    const style = rank ? RANK_STYLES[rank] : null;
     drawLogoMark(
       ctx,
       marginX,
       markY,
       markWidth,
-      premium
-        ? supporterGradient(ctx, marginX, markY, markWidth, markHeight)
-        : undefined,
+      rank ? rankGradient(ctx, rank, marginX, markY, markWidth, markHeight) : undefined,
     );
     ctx.textAlign = "left";
-    ctx.fillStyle = premium ? SUPPORTER_INK : theme.brand;
+    ctx.fillStyle = style ? style.ink : theme.brand;
     ctx.font = font(normalWeight, 13 * base, fontStack);
     const wordX = marginX + markWidth + 9 * base;
     fillTracked(ctx, WORDMARK, wordX, headerY, 1.2 * base);
-    if (premium) {
+    if (style) {
       const wordWidth = trackedWidth(ctx, WORDMARK, 1.2 * base);
       ctx.font = font(normalWeight, 9.5 * base, fontStack);
-      fillTracked(ctx, "✦ SUPPORTER", wordX + wordWidth + 9 * base, headerY, 1.6 * base);
+      fillTracked(ctx, style.badge, wordX + wordWidth + 9 * base, headerY, 1.6 * base);
     }
   }
 

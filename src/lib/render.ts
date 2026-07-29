@@ -92,6 +92,77 @@ function wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number)
   return lines;
 }
 
+/** Marks a pause, so a line that ends here reads as a deliberate break. */
+const PAUSE = new Set("、。，．：；！？!?,.");
+
+/**
+ * Line breaking for the caption. `wrapText` fills every line to the edge, which
+ * often strands one or two characters on the last line. This keeps the number
+ * of lines that greedy wrapping needs, but chooses the breaks that spread the
+ * text evenly, prefers to break after a punctuation mark, and refuses to leave
+ * a line with only a couple of characters on it.
+ */
+function wrapBalanced(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] {
+  const greedy = wrapText(ctx, text, maxWidth);
+  if (greedy.length < 2) return greedy;
+
+  const chars = Array.from(text);
+  const size = chars.length;
+  // Per-character widths ignore kerning, which is close enough to compare
+  // candidate breaks; the chosen lines are measured properly at the end.
+  const upTo = [0];
+  for (const char of chars) upTo.push(upTo[upTo.length - 1] + ctx.measureText(char).width);
+
+  const breakable = (index: number) =>
+    !NO_LINE_START.has(chars[index]) && !NO_LINE_END.has(chars[index - 1]);
+
+  const lineCost = (start: number, end: number, last: boolean) => {
+    const width = upTo[end] - upTo[start];
+    if (width > maxWidth) return Infinity;
+    const slack = (maxWidth - width) / maxWidth;
+    const count = end - start;
+    // A short last line is normal, a short line anywhere is not.
+    let cost = slack * slack * (last ? 0.25 : 1);
+    if (PAUSE.has(chars[end - 1])) cost -= 0.05;
+    if (count <= 2) cost += 1.5;
+    else if (count <= 4) cost += 0.3;
+    return cost;
+  };
+
+  const rows = greedy.length;
+  const cost = Array.from({ length: rows + 1 }, () => new Array<number>(size + 1).fill(Infinity));
+  const from = Array.from({ length: rows + 1 }, () => new Array<number>(size + 1).fill(0));
+  cost[0][0] = 0;
+  for (let row = 1; row <= rows; row += 1) {
+    const last = row === rows;
+    for (let end = last ? size : 1; end <= size; end += 1) {
+      for (let start = 0; start < end; start += 1) {
+        if (cost[row - 1][start] === Infinity) continue;
+        if (start > 0 && !breakable(start)) continue;
+        const total = cost[row - 1][start] + lineCost(start, end, last);
+        if (total < cost[row][end]) {
+          cost[row][end] = total;
+          from[row][end] = start;
+        }
+      }
+    }
+  }
+  if (cost[rows][size] === Infinity) return greedy;
+
+  const lines: string[] = [];
+  let end = size;
+  for (let row = rows; row > 0; row -= 1) {
+    const start = from[row][end];
+    lines.unshift(chars.slice(start, end).join(""));
+    end = start;
+  }
+  return lines.some((line) => ctx.measureText(line).width > maxWidth) ? greedy : lines;
+}
+
 function trackedWidth(ctx: CanvasRenderingContext2D, text: string, tracking: number): number {
   const chars = Array.from(text);
   return (
@@ -361,7 +432,7 @@ function buildBlocks(
     ctx.font = font(normalWeight, noteSize, fontStack);
     blocks.push({
       kind: "text",
-      lines: wrapText(ctx, config.subNote, contentWidth * 0.92),
+      lines: wrapBalanced(ctx, config.subNote, contentWidth * 0.92),
       size: noteSize,
       weight: normalWeight,
       color: theme.note,

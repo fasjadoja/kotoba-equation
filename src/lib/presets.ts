@@ -1,3 +1,5 @@
+import { COMPLEX_PRESETS } from "./complexPresets";
+import { LIFE_PRESETS } from "./lifePresets";
 import { PRESET_THEMES, THEME_PICK, type PresetTheme } from "./presetThemes";
 import { QUOTE_PRESETS } from "./quotePresets";
 import type { FormulaElement } from "./types";
@@ -6,8 +8,13 @@ export type PresetCategory =
   | "定番"
   | "くらし・ごはん"
   | "人との関係"
+  | "からだ・こころ"
   | "学び・すこやか"
   | "仕事・お金"
+  | "遊び・趣味"
+  | "季節・行事"
+  | "歴史・名作"
+  | "カルチャー・流行"
   | "世界の名言"
   | "世界のことわざ";
 
@@ -608,14 +615,24 @@ const EVERYDAY_PRESETS: Preset[] = [
 ];
 
 /** The everyday stock first, then the sayings collected from around the world. */
-export const PRESETS: Preset[] = [...EVERYDAY_PRESETS, ...QUOTE_PRESETS];
+export const PRESETS: Preset[] = [
+  ...EVERYDAY_PRESETS,
+  ...LIFE_PRESETS,
+  ...QUOTE_PRESETS,
+  ...COMPLEX_PRESETS,
+];
 
 export const PRESET_CATEGORIES: PresetCategory[] = [
   "定番",
   "くらし・ごはん",
   "人との関係",
+  "からだ・こころ",
   "学び・すこやか",
   "仕事・お金",
+  "遊び・趣味",
+  "季節・行事",
+  "歴史・名作",
+  "カルチャー・流行",
   "世界の名言",
   "世界のことわざ",
 ];
@@ -737,8 +754,8 @@ export function dailyPresets(
     }
     return list;
   };
-  const everyday = shuffled([...EVERYDAY_PRESETS, ...PRESET_THEMES]);
-  const sayings = shuffled(QUOTE_PRESETS);
+  const everyday = shuffled([...EVERYDAY_PRESETS, ...LIFE_PRESETS, ...PRESET_THEMES]);
+  const sayings = shuffled([...QUOTE_PRESETS, ...COMPLEX_PRESETS]);
   // How much of the batch is sayings is itself drawn from the seed, so some
   // days open with mostly everyday equations and some with mostly quotes.
   const quoteShare = 20 + (next() % 61);

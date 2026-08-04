@@ -1,35 +1,8 @@
-import type { Preset, PresetCategory } from "./presets";
-import type { FormulaElement } from "./types";
+import type { Preset } from "./presets";
+import { rowToPreset, type PresetRow } from "./presetRows";
 
-/**
- * Sayings from around the world, rewritten as equations. Each row is kept on a
- * single line — `body` spells the right-hand side with its operators inline
- * (「準備×機会」) and is expanded into elements at module load, so three hundred
- * of them stay readable in source.
- */
-type QuoteRow = [
-  id: string,
-  label: string,
-  result: string,
-  body: string,
-  note: string,
-  relation?: string,
-];
-
-const OPERATOR = /([＋−×÷])/;
-
-function toPreset(row: QuoteRow, category: PresetCategory): Preset {
-  const [id, label, resultText, body, subNote, relation] = row;
-  const parts = body.split(OPERATOR).filter(Boolean);
-  const elements: FormulaElement[] = parts
-    .map((part, index) =>
-      index % 2 === 0 ? { op: index === 0 ? "" : parts[index - 1], text: part } : null,
-    )
-    .filter((element): element is FormulaElement => element !== null);
-  return relation
-    ? { id, category, label, resultText, subNote, elements, relation }
-    : { id, category, label, resultText, subNote, elements };
-}
+/** Sayings from around the world, rewritten as equations. */
+type QuoteRow = PresetRow;
 
 /** Philosophers, writers, scientists and leaders, oldest first. */
 const QUOTE_ROWS: QuoteRow[] = [
@@ -343,6 +316,6 @@ const PROVERB_ROWS: QuoteRow[] = [
 ];
 
 export const QUOTE_PRESETS: Preset[] = [
-  ...QUOTE_ROWS.map((row) => toPreset(row, "世界の名言")),
-  ...PROVERB_ROWS.map((row) => toPreset(row, "世界のことわざ")),
+  ...QUOTE_ROWS.map((row) => rowToPreset(row, "世界の名言")),
+  ...PROVERB_ROWS.map((row) => rowToPreset(row, "世界のことわざ")),
 ];

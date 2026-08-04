@@ -17,23 +17,20 @@ export default function SiteHeader() {
   }, []);
 
   return (
+    /* A thin, quiet bar: frosted once the page moves, invisible at the top. */
     <header
-      className={`sticky top-0 z-20 border-b transition-all duration-300 ${
+      className={`sticky top-0 z-20 border-b transition-colors duration-300 ${
         scrolled
-          ? "border-line bg-panel/85 shadow-[0_1px_12px_rgba(18,26,22,0.05)] backdrop-blur-md"
+          ? "border-line bg-panel/80 backdrop-blur-xl backdrop-saturate-150"
           : "border-transparent bg-transparent"
       }`}
     >
-      <div
-        className={`mx-auto flex max-w-[1400px] items-center justify-between gap-4 px-4 transition-all duration-300 ${
-          scrolled ? "py-2" : "py-4"
-        }`}
-      >
+      <div className="mx-auto flex h-[52px] max-w-[1120px] items-center justify-between gap-4 px-4 sm:px-6">
         <Logo />
         {DONATE_ENABLED && (
           <a
             href={`/#${DONATE_ANCHOR}`}
-            className={`${donateButtonClass} px-4 py-2 text-[12px]`}
+            className={`${donateButtonClass} px-4 py-1.5 text-[12px]`}
           >
             チップを送る
           </a>

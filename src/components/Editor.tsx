@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DAILY_PRESET_COUNT,
+  PRESET_CATEGORIES,
   dailyPresets,
   dayKey,
   type Preset,
+  type PresetCategory,
 } from "@/lib/presets";
 import { THEMES } from "@/lib/themes";
 import { CANVAS_FONTS, type CanvasFontId } from "@/lib/fonts";
@@ -37,28 +39,17 @@ import { SHARE_HASHTAGS, SITE } from "@/lib/site";
 import { galleryText, relativeTime, type GalleryItem } from "@/lib/gallery";
 import {
   AlertIcon,
-  BlocksIcon,
-  CalendarIcon,
   CheckIcon,
   ClockIcon,
   CopyIcon,
-  EqualsIcon,
   ExpandIcon,
   FrameIcon,
-  HashIcon,
   InfoIcon,
-  LayoutIcon,
-  NoteIcon,
-  PaletteIcon,
   PlusIcon,
   RefreshIcon,
   SaveIcon,
   SearchIcon,
-  SlidersIcon,
-  TargetIcon,
   TrashIcon,
-  TypeIcon,
-  UserIcon,
   UsersIcon,
   XIcon,
 } from "./icons";
@@ -91,6 +82,17 @@ const CUSTOM_OP = "__custom__";
 
 /** Enough results to choose from without turning the panel into a page. */
 const SEARCH_LIMIT = 12;
+
+/** `null` draws from the whole stock; the rest are the shelves of the picker. */
+const PRESET_SHELVES: (PresetCategory | null)[] = [null, ...PRESET_CATEGORIES];
+
+/** The equation itself, so a card says more than its title. */
+function presetSummary(preset: Preset) {
+  const right = preset.elements
+    .map((element) => `${element.op}${element.text}`)
+    .join("");
+  return `${preset.resultText} ${preset.relation ?? "＝"} ${right}`;
+}
 
 type Status = { text: string; tone: "ok" | "error" };
 
@@ -152,6 +154,7 @@ export default function Editor() {
   const [showSizes, setShowSizes] = useState(false);
   const [todaysPresets, setTodaysPresets] = useState<Preset[]>([]);
   const [presetRound, setPresetRound] = useState(0);
+  const [presetShelf, setPresetShelf] = useState<PresetCategory | null>(null);
   const [query, setQuery] = useState("");
   const [showLeadOp, setShowLeadOp] = useState(false);
   const [pinActions, setPinActions] = useState(false);
@@ -186,8 +189,15 @@ export default function Editor() {
   // Seeded on the browser's calendar day, so the set rotates at local midnight
   // without making the server and the client render different markup.
   useEffect(() => {
-    setTodaysPresets(dailyPresets(dayKey(new Date()), DAILY_PRESET_COUNT, presetRound));
-  }, [presetRound]);
+    setTodaysPresets(
+      dailyPresets(
+        dayKey(new Date()),
+        DAILY_PRESET_COUNT,
+        presetRound,
+        presetShelf ?? undefined,
+      ),
+    );
+  }, [presetRound, presetShelf]);
 
   useEffect(() => {
     setCanCopy(
@@ -534,11 +544,11 @@ export default function Editor() {
             ✦
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] font-semibold text-[#7A5A10]">
+            <p className="text-[14px] font-semibold text-[#7A5A10]">
               ご支援ありがとうございます。チップを送った方限定の「{supporter.rule.label}」を解錠しました。
             </p>
-            <p className="mt-1 text-[12px] leading-relaxed text-[#8A6A1C]">
-              ⑥の「{supporter.rule.label}にする」をONにすると、画像のロゴが変わります。
+            <p className="mt-1 text-[13px] leading-relaxed text-[#8A6A1C]">
+              「ことばをそえる」の「{supporter.rule.label}にする」をONにすると、画像のロゴが変わります。
               {supporter.rule.exports === null
                 ? `これから${Math.max(1, supporter.hoursLeft)}時間のあいだ使えます。`
                 : `コピー・保存した画像${supporter.rule.exports}枚分まで、最長で${Math.max(
@@ -551,764 +561,495 @@ export default function Editor() {
           <button
             onClick={supporter.dismiss}
             aria-label="このお知らせを閉じる"
-            className="shrink-0 rounded-md px-2 py-1 text-[12px] text-[#8A6A1C] transition hover:bg-[#F3E3B8]"
+            className="shrink-0 rounded-md px-2 py-1 text-[13px] text-[#8A6A1C] transition hover:bg-[#F3E3B8]"
           >
             閉じる
           </button>
         </div>
       )}
+
       {/* On a desktop everything you edit stays in the left column so the
           preview can sit still in the right one while you type. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(380px,42%)] lg:items-start">
-      <div className="order-2 min-w-0 divide-y divide-line rounded-2xl border border-line bg-panel shadow-card lg:order-none lg:col-start-1 lg:row-start-1">
-        <Section
-          icon={<SearchIcon size={14} />}
-          label="式をさがす（テンプレート・履歴）"
-        >
-          <div className="relative">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="例：睡眠 / しあわせ / 会議"
-              className={`${fieldClass} w-full pl-9`}
-            />
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint">
-              <SearchIcon size={14} />
-            </span>
-          </div>
-          {!query.trim() && (
-            <p className="mt-2 text-[11px] text-faint">
-              テンプレートと、この端末の履歴から探せます。
-            </p>
-          )}
-          {query.trim() &&
-            (hits.length === 0 ? (
-              <p className="mt-2 text-[11px] text-faint">
-                一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
-              </p>
-            ) : (
-              <ul className="mt-2 space-y-1">
-                {hits.map((hit) => (
-                  <li key={`${hit.kind}-${hit.id}`}>
-                    <button
-                      onClick={() => applyHit(hit)}
-                      title={hit.text}
-                      className="flex w-full items-center gap-2 rounded-md border border-line bg-raised px-2.5 py-2 text-left transition hover:border-accent/50"
-                    >
-                      <span
-                        className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
-                          hit.kind === "history"
-                            ? "bg-accent/10 text-accent"
-                            : "bg-panel text-faint"
-                        }`}
-                      >
-                        {hit.kind === "history" ? "履歴" : "テンプレ"}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[12px] text-fg">
-                        {hit.text}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            ))}
-          <Hint label="検索について">
-            テンプレートとこの端末の履歴をまとめて探します。ひらがな・カタカナ・漢字の違いや、1文字くらいの打ち間違いは自動で吸収します（スペース区切りで複数のことばを指定すると、両方を含む式だけが残ります）。書きかけの式や、ことばになっていない履歴は結果に出ません。
-          </Hint>
-        </Section>
-
-        <Section
-          tone="info"
-          icon={<CalendarIcon size={14} />}
-          label="今日のテンプレート"
-        >
-          <div className="flex flex-wrap gap-1.5">
-            {todaysPresets.map((preset) => (
-              <button
-                key={preset.id}
-                onClick={() => applyPreset(preset)}
-                title={`${preset.resultText} ${preset.relation ?? "＝"} ${preset.elements
-                  .map((element) => `${element.op}${element.text}`)
-                  .join("")}`}
-                className={chipClass}
-              >
-                {preset.label}
-              </button>
-            ))}
-          </div>
-          <div className="mt-2 flex items-center justify-between gap-2">
-            <Hint label="テンプレートについて">
-              1日に1回入れ替わります。クリックすると入力欄に読み込みます。「別のテンプレを見る」で、まだ見ていない候補を順に見られます。
-            </Hint>
-            <button
-              onClick={() => setPresetRound((round) => round + 1)}
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1.5 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
-            >
-              <RefreshIcon size={13} />
-              別のテンプレを見る
-            </button>
-          </div>
-        </Section>
-
-        {/* Starting over is a first move, not a last one, so it sits above the
-            fields instead of below the export buttons. */}
-        <div className="flex items-center justify-between gap-2 px-3.5 py-2.5">
-          <p className="text-[11px] text-faint">入力（この端末に自動保存）</p>
-          <button onClick={resetAll} className={`${resetButtonClass} shrink-0`}>
-            <TrashIcon size={13} />
-            入力をリセット
-          </button>
-        </div>
-
-        <Section index="①" icon={<TargetIcon size={14} />} label="結果（左側）">
-          <Field
-            value={config.resultText}
-            onChange={(value) => update({ resultText: value })}
-            placeholder="例：A（伝えたい結論）"
-            limit={LIMITS.resultText}
-          />
-        </Section>
-
-        <Section
-          index="②"
-          icon={<EqualsIcon size={14} />}
-          label="関係（左と右をつなぐ記号）"
-        >
-          <div className="flex flex-wrap items-center gap-1.5">
-            {RELATIONS.map((relation) => (
-              <button
-                key={relation}
-                onClick={() => {
-                  setCustomRelation(false);
-                  update({ relation });
-                }}
-                aria-pressed={!customRelation && config.relation === relation}
-                aria-label={`関係記号 ${relation}`}
-                className={symbolChipClass(
-                  !customRelation && config.relation === relation,
-                )}
-              >
-                {relation}
-              </button>
-            ))}
-            <button
-              onClick={() => {
-                setCustomRelation(true);
-                update({ relation: "" });
-              }}
-              aria-pressed={customRelation}
-              className={`${symbolChipClass(customRelation)} w-auto px-3 text-[12px]`}
-            >
-              その他
-            </button>
-            {customRelation && (
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(392px,41%)] lg:items-start lg:gap-5">
+        <div className="order-2 min-w-0 space-y-4 lg:order-none lg:col-start-1 lg:row-start-1">
+          <Card
+            icon={<SearchIcon size={17} />}
+            title="テンプレートから始める"
+            hint="選ぶとそのまま入力欄に入ります。自分のことばに書き換えて使えます"
+          >
+            <div className="relative">
               <input
-                type="text"
-                value={config.relation}
-                maxLength={LIMITS.relation}
-                placeholder="≒"
-                aria-label="関係記号を直接入力（1文字）"
-                onChange={(e) =>
-                  update({
-                    relation: Array.from(e.target.value).slice(-1).join(""),
-                  })
-                }
-                className={`${fieldClass} w-[56px] shrink-0 px-2 text-center`}
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="ことばで探す（例：睡眠 / しあわせ / 会議）"
+                className={`${fieldClass} w-full pl-10`}
               />
-            )}
-          </div>
-          <Hint>
-            「A ＝ B × C」のような等式も、「A ＞ B」のような比較も。「その他」を選ぶと好きな記号を1文字入力できます。
-          </Hint>
-        </Section>
-
-        <Section
-          index="③"
-          icon={<BlocksIcon size={14} />}
-          label="右側の要素"
-          hint={`${config.elements.length} / ${MAX_ELEMENTS}`}
-        >
-          <div className="space-y-1.5">
-            {config.elements.map((element, index) => {
-              const custom =
-                customOps[index] ??
-                (!!element.op && !isPresetOperator(element.op));
-              return (
-                <div key={index} className="flex items-center gap-1.5">
-                  <span
-                    className="w-4 shrink-0 text-center font-mono text-[11px] text-faint"
-                    aria-hidden
-                  >
-                    {index + 1}
-                  </span>
-                  {/* The first element normally has nothing in front of it, so
-                      the picker only appears once a bracket is asked for. */}
-                  <div className={`relative shrink-0 ${index === 0 && !leadOp ? "hidden" : ""}`}>
-                    <select
-                      value={custom ? CUSTOM_OP : element.op}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setOperatorMode(index, value === CUSTOM_OP);
-                        updateElement(index, {
-                          op: value === CUSTOM_OP ? "" : value,
-                        });
-                      }}
-                      aria-label={`要素 ${index + 1} の前の記号`}
-                      className={`${fieldClass} w-[74px] appearance-none pl-3 pr-6 text-center text-[15px]`}
-                    >
-                      {index === 0 && <option value="">なし</option>}
-                      {OPERATOR_GROUPS.map((group) => (
-                        <optgroup key={group.label} label={group.label}>
-                          {group.ops.map((op) => (
-                            <option key={op} value={op}>
-                              {op}
-                            </option>
-                          ))}
-                        </optgroup>
-                      ))}
-                      <option value={CUSTOM_OP}>その他…</option>
-                    </select>
-                    <ChevronIcon />
-                  </div>
-                  {custom && (
-                    <input
-                      type="text"
-                      value={element.op}
-                      maxLength={LIMITS.operator}
-                      placeholder="＝"
-                      aria-label={`要素 ${index + 1} の演算子を直接入力（1文字）`}
-                      onChange={(e) =>
-                        updateElement(index, {
-                          op: Array.from(e.target.value).slice(-1).join(""),
-                        })
-                      }
-                      className={`${fieldClass} w-[46px] shrink-0 px-1 text-center font-mono`}
-                    />
-                  )}
-                  <input
-                    type="text"
-                    value={element.text}
-                    placeholder={`例：${String.fromCharCode(66 + (index % 25))}`}
-                    aria-label={`要素 ${index + 1} のことば`}
-                    maxLength={LIMITS.element}
-                    onChange={(e) =>
-                      updateElement(index, { text: e.target.value })
-                    }
-                    className={`${fieldClass} min-w-0 flex-1`}
-                  />
-                  <button
-                    onClick={() => removeElement(index)}
-                    disabled={config.elements.length <= 1}
-                    aria-label={`要素 ${index + 1} を削除`}
-                    title="この要素を削除"
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-faint transition hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:text-faint/35 disabled:hover:bg-transparent disabled:hover:text-faint/35"
-                  >
-                    <TrashIcon size={15} />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-          <button
-            onClick={addElement}
-            disabled={config.elements.length >= MAX_ELEMENTS}
-            className="mt-1.5 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-dashed border-control py-2 text-[12px] font-medium text-muted transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:text-faint/60"
-          >
-            <PlusIcon size={14} />
-            {config.elements.length >= MAX_ELEMENTS
-              ? `要素は${MAX_ELEMENTS}つまで`
-              : "要素を追加"}
-          </button>
-          <button
-            onClick={() => {
-              if (leadOp) {
-                setOperatorMode(0, false);
-                updateElement(0, { op: "" });
-              }
-              setShowLeadOp(!leadOp);
-            }}
-            className="mt-1.5 text-[11px] text-faint transition hover:text-accent"
-          >
-            {leadOp ? "要素1の前の記号をなくす" : "要素1の前にも記号を入れる（括弧など）"}
-          </button>
-          <Hint>
-            2つ目以降の左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
-            <br />
-            括弧の例：200 ＝（3 ＋ 7）× 20　※「）」だけの行はことばを空に。
-          </Hint>
-        </Section>
-
-        <Section
-          index="④"
-          icon={<NoteIcon size={14} />}
-          label="補足（画像の下のメッセージ）"
-        >
-          <Field
-            value={config.subNote}
-            onChange={(value) => update({ subNote: value })}
-            placeholder={"例：※式の意味や注釈を一言で。\n長い文章も自動で折り返します。"}
-            limit={LIMITS.subNote}
-            multiline
-          />
-        </Section>
-
-        <Section
-          index="⑤"
-          icon={<HashIcon size={14} />}
-          label="ハッシュタグ（画像の左下）"
-        >
-          <Field
-            value={config.hashtags}
-            onChange={(value) => update({ hashtags: value })}
-            placeholder="例：#ことばの方程式 #タグ"
-            limit={LIMITS.hashtags}
-          />
-          <Hint>
-            スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
-            <br />
-            「#ことばの方程式」は最初から入っています。不要なら消してください。
-          </Hint>
-        </Section>
-
-        <Section
-          index="⑥"
-          icon={<UserIcon size={14} />}
-          label="アカウント名 / ロゴ"
-        >
-          <Field
-            value={config.author}
-            onChange={(value) => update({ author: value })}
-            placeholder="例：@your_account（空欄でもOK）"
-            limit={LIMITS.author}
-          />
-          <div className="mt-2.5 space-y-2">
-            <Toggle
-              checked={config.showWatermark}
-              onChange={(checked) => update({ showWatermark: checked })}
-              label="画像に「ことばの方程式」のロゴを入れる"
-            />
-            <Toggle
-              checked={config.showCopyright}
-              onChange={(checked) => update({ showCopyright: checked })}
-              label={`© 表記を付ける（© ${new Date().getFullYear()} ${config.author || "you"}）`}
-            />
-            {unlockedRank && unlockRule && (
-              <>
-                <Toggle
-                  checked={config.logoRank === unlockedRank}
-                  onChange={(checked) =>
-                    update({ logoRank: checked ? unlockedRank : "brand" })
-                  }
-                  label={`${unlockRule.label}にする（チップを送った方限定）`}
-                  disabled={!config.showWatermark}
-                />
-                <p className="text-[11px] leading-snug text-[#8A6A1C]">
-                  ✦ 解錠中：
-                  {supporter.left === null
-                    ? `あと約${supporter.hoursLeft}時間`
-                    : `のこり${supporter.left}枚（あと約${Math.max(
-                        1,
-                        Math.round(supporter.hoursLeft / 24),
-                      )}日）`}
-                  。書き出した画像の枚数ぶんだけ使えます。
-                </p>
-              </>
-            )}
-          </div>
-          <Hint>
-            ロゴは外せます。外すと左上に何も入らない画像になります（商用利用も自由です）。
-          </Hint>
-        </Section>
-
-        <Section
-          index="⑦"
-          icon={<ClockIcon size={14} />}
-          label="この式を履歴に残すか"
-        >
-          {/* Two explicit choices read faster than one checkbox whose unchecked
-              meaning has to be inferred. */}
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              onClick={() => setKeepHistory(true)}
-              aria-pressed={keepHistory}
-              className={`${choiceClass(keepHistory)} text-left leading-snug`}
-            >
-              履歴に残す
-              <span className="mt-0.5 block text-[10px] font-normal text-faint">
-                あとで呼び出せます
-              </span>
-            </button>
-            <button
-              onClick={() => setKeepHistory(false)}
-              aria-pressed={!keepHistory}
-              className={`${choiceClass(!keepHistory)} text-left leading-snug`}
-            >
-              残さない
-              <span className="mt-0.5 block text-[10px] font-normal text-faint">
-                保存しても記録しません
-              </span>
-            </button>
-          </div>
-          <Hint>
-            履歴はこの端末のブラウザにだけ、直近{HISTORY_LIMIT}
-            件まで残ります（サーバーには送られません）。画像を保存・コピー・シェアしたときに記録されます。
-          </Hint>
-        </Section>
-
-        <div className="flex items-center justify-between gap-2 p-3.5">
-          <p className="text-[11px] leading-snug text-faint">
-            入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
-          </p>
-          <button onClick={resetAll} className={`${resetButtonClass} shrink-0`}>
-            <TrashIcon size={13} />
-            リセット
-          </button>
-        </div>
-      </div>
-
-      {/* On phones the preview is pinned under the header; the band behind it is
-          opaque so scrolling content never shows through the gap. */}
-      <div className="sticky top-0 z-10 order-1 -mx-4 min-w-0 bg-ink px-4 pb-2 pt-[48px] lg:order-none lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:mx-0 lg:self-start lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-4 lg:top-[44px]">
-        <div
-          className={`rounded-2xl border bg-panel transition-shadow duration-300 ${
-            justUpdated
-              ? "border-accent/40 shadow-[0_6px_20px_rgba(11,107,203,0.16)]"
-              : "border-line shadow-card"
-          }`}
-        >
-          {/* One recommended size is enough for most posts, so the rest stay
-              behind a disclosure instead of a row of five choices. */}
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3 py-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-accent/10 px-2.5 py-1 text-[12px] font-semibold text-accent">
-                <FrameIcon size={13} />
-                {size.label}
-              </span>
-              <span className="truncate text-[11px] text-muted">
-                {isRecommendedSize(config.sizeId) ? "スマホ投稿の王道サイズ" : size.hint}
+              <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-faint">
+                <SearchIcon size={15} />
               </span>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="hidden font-mono text-[11px] text-faint sm:inline">
-                {size.width} × {size.height}
-              </span>
-              <button
-                onClick={openZoom}
-                className="inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
-              >
-                <ExpandIcon size={13} />
-                拡大
-              </button>
-              <button
-                onClick={() => setShowSizes((previous) => !previous)}
-                aria-expanded={showSizes}
-                className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent"
-              >
-                サイズを変える
-              </button>
-              <button
-                onClick={confirmReset}
-                aria-label="入力をリセット"
-                title="入力をリセット"
-                className={resetButtonClass}
-              >
-                <TrashIcon size={13} />
-                リセット
-              </button>
-              {/* Folding the pinned preview away gives the form the whole
-                  screen while typing on a phone. */}
-              <button
-                onClick={() => setHidePreview((previous) => !previous)}
-                aria-expanded={!hidePreview}
-                className="rounded-md border-[1.5px] border-control px-2.5 py-1 text-[11px] font-medium text-fg transition hover:border-accent hover:text-accent lg:hidden"
-              >
-                {hidePreview ? "ひらく" : "たたむ"}
-              </button>
-            </div>
-          </div>
-          {showSizes && (
-            <div className="border-b border-line px-3 py-2">
-              <div className="flex flex-wrap gap-1.5">
-                {SIZES.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => update({ sizeId: item.id })}
-                    aria-pressed={config.sizeId === item.id}
-                    title={item.hint}
-                    className={`${choiceClass(config.sizeId === item.id)} py-1.5`}
-                  >
-                    {item.label}
-                    {item.id === RECOMMENDED_SIZE && (
-                      <span className="ml-1.5 text-[10px] text-faint">王道</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-1.5 text-[11px] leading-snug text-faint">
-                迷ったら 4:5 のままでOK。ストーリーやTikTokは 9:16、ブログの見出し画像は 16:9 が向いています。
-              </p>
-            </div>
-          )}
-          <div
-            className={`w-full items-center justify-center p-3 sm:p-8 ${hidePreview ? "hidden lg:flex" : "flex"}`}
-          >
-            <button
-              onClick={openZoom}
-              aria-label="プレビューを拡大して見る"
-              className="group relative flex max-w-full cursor-zoom-in items-center justify-center"
-            >
-              <canvas
-                ref={canvasRef}
-                aria-label="生成された思考式の画像"
-                className="max-h-[30vh] w-auto max-w-full rounded-lg border border-line shadow-lift transition-transform duration-300 group-hover:scale-[1.01] sm:max-h-[42vh] lg:max-h-[56vh]"
-              />
-              <span className="pointer-events-none absolute bottom-2 right-2 hidden items-center gap-1 rounded-full bg-ink/70 px-2 py-1 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100 sm:inline-flex">
-                <ExpandIcon size={11} />
-                拡大
-              </span>
-            </button>
-          </div>
-          {/* The pinned preview is the point of this card on a phone, so the
-              buttons stay folded until someone asks for them. */}
-          <div
-            className={`border-t border-line px-3 py-1.5 lg:hidden ${hidePreview ? "hidden" : ""}`}
-          >
-            {pinActions ? (
-              <div className="flex items-center gap-2">
-                {canCopy && (
-                  <button
-                    onClick={() => void handleCopy()}
-                    className={`${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`}
-                  >
-                    <CopyIcon size={14} />
-                    画像をコピー
-                  </button>
-                )}
-                <button
-                  onClick={() => void handleDownload()}
-                  className={
-                    canCopy
-                      ? `${secondaryButtonClass} shrink-0 px-3 py-2 text-[12px]`
-                      : `${primaryButtonClass} flex-1 px-3 py-2 text-[12px]`
-                  }
-                >
-                  <SaveIcon size={14} />
-                  {saveLabel}
-                </button>
-                <button
-                  onClick={() => setPinActions(false)}
-                  aria-label="ボタンをたたむ"
-                  className="shrink-0 rounded-md px-2 py-2 text-[12px] text-faint transition hover:text-accent"
-                >
-                  ▲
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setPinActions(true)}
-                aria-expanded={false}
-                className="w-full rounded-md py-1 text-[11px] font-medium text-muted transition hover:text-accent"
-              >
-                保存・コピーのボタンを出す ▼
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
 
-      <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
-        <div className="divide-y divide-line rounded-2xl border border-line bg-panel shadow-card">
-          <div className="grid sm:grid-cols-[190px_210px_minmax(0,1fr)] sm:divide-x sm:divide-line lg:grid-cols-2 xl:grid-cols-[190px_210px_minmax(0,1fr)]">
-            <Section icon={<TypeIcon size={14} />} label="書体">
-              <div className="grid grid-cols-2 gap-1.5">
-                {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
-                  <button
-                    key={id}
-                    onClick={() => update({ fontId: id })}
-                    aria-pressed={config.fontId === id}
-                    className={choiceClass(config.fontId === id)}
-                  >
-                    {CANVAS_FONTS[id].label}
-                  </button>
-                ))}
-              </div>
-            </Section>
-
-            <Section icon={<LayoutIcon size={14} />} label="レイアウト">
-              <div className="grid grid-cols-3 gap-1.5">
-                {LAYOUTS.map((layout) => (
-                  <button
-                    key={layout.id}
-                    onClick={() => update({ layoutId: layout.id })}
-                    aria-pressed={config.layoutId === layout.id}
-                    title={layout.hint}
-                    className={`${choiceClass(config.layoutId === layout.id)} px-2`}
-                  >
-                    {layout.label}
-                  </button>
-                ))}
-              </div>
-              <Hint>自動はできる限り横1行。入り切らない式だけ上下に分けます。</Hint>
-            </Section>
-
-            {/* The narrower left column at lg cannot hold three swatches next
-                to the other two settings, so it takes a row of its own. */}
-            <div className="lg:col-span-2 xl:col-span-1">
-            <Section icon={<PaletteIcon size={14} />} label="配色">
-              <div className="grid max-w-md grid-cols-3 gap-1.5">
-                {THEMES.map((theme) => (
-                  <button
-                    key={theme.id}
-                    onClick={() => update({ themeId: theme.id })}
-                    aria-pressed={config.themeId === theme.id}
-                    className={`${choiceClass(config.themeId === theme.id)} flex items-center justify-center gap-2 px-2`}
-                  >
-                    <span
-                      className="h-2.5 w-2.5 rounded-full border border-black/15"
-                      style={{ backgroundColor: theme.swatch }}
-                    />
-                    {theme.name}
-                  </button>
-                ))}
-              </div>
-            </Section>
-            </div>
-          </div>
-
-          <Section
-            icon={<SlidersIcon size={14} />}
-            label="微調整（自動レイアウトの上書き）"
-            hint={
-              config.textScale !== 1 || config.marginScale !== 1
-                ? "調整中"
-                : undefined
-            }
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Slider
-                label="文字の大きさ"
-                value={config.textScale}
-                range={TEXT_SCALE}
-                onChange={(value) => update({ textScale: value })}
-              />
-              <Slider
-                label="左右の余白"
-                value={config.marginScale}
-                range={MARGIN_SCALE}
-                onChange={(value) => update({ marginScale: value })}
-              />
-            </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              <Hint>
-                文字数が多い式は自動で縮小されます。もう少し大きく／余白を狭くしたいときだけ動かしてください（はみ出す手前で自動的に止まります）。
-              </Hint>
-              <button
-                onClick={() => update({ textScale: 1, marginScale: 1 })}
-                disabled={config.textScale === 1 && config.marginScale === 1}
-                className="shrink-0 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/50 disabled:hover:text-faint/50"
-              >
-                リセット
-              </button>
-            </div>
-          </Section>
-
-
-
-          {wall.enabled && (
-            <Section
-              tone="info"
-              icon={<UsersIcon size={14} />}
-              label="みんなの式（ほかの人が公開したもの）"
-            >
-              {wall.loading ? (
-                <p className="text-[11px] text-faint">読み込んでいます…</p>
-              ) : wall.items.length === 0 ? (
-                <p className="text-[11px] text-faint">
-                  まだ公開された式がありません。⑧から公開できます。
+            {query.trim() ? (
+              /* While there is a query the shelves step aside: one list of
+                 matches is easier to scan than a list beside a grid. */
+              hits.length === 0 ? (
+                <p className="text-[13px] leading-relaxed text-muted">
+                  一致する式が見つかりませんでした。ことばを短くするか、別の言い方でお試しください。
                 </p>
               ) : (
-                <>
-                  <p className="mb-1.5 text-[11px] text-faint">
-                    クリックすると、その式を下書きとして読み込みます（読みやすい式だけを選んで表示しています）。
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {wall.items.map((item) => (
+                <ul className="space-y-1.5">
+                  {hits.map((hit) => (
+                    <li key={`${hit.kind}-${hit.id}`}>
                       <button
-                        key={item.id}
-                        onClick={() => adoptShared(item)}
-                        className={`${chipClass} max-w-full truncate`}
-                        title={`${galleryText(item)}（${relativeTime(item.createdAt)}）`}
+                        onClick={() => applyHit(hit)}
+                        title={hit.text}
+                        className="flex w-full items-center gap-2.5 rounded-xl bg-raised px-3.5 py-3 text-left transition hover:bg-accentSoft"
                       >
-                        {galleryText(item)}
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                            hit.kind === "history"
+                              ? "bg-accent text-white"
+                              : "bg-panel text-muted"
+                          }`}
+                        >
+                          {hit.kind === "history" ? "履歴" : "テンプレ"}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[14px] text-fg">
+                          {hit.text}
+                        </span>
                       </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </Section>
-          )}
-
-          <Section
-            tone="info"
-            icon={<ClockIcon size={14} />}
-            label="直近の履歴"
-            hint={entries.length > 0 ? `${entries.length} / ${HISTORY_LIMIT}` : undefined}
-          >
-            {entries.length === 0 ? (
-              <p className="text-[11px] text-faint">
-                画像を保存すると、この端末に最大{HISTORY_LIMIT}件が残ります（テンプレとして使えます）。
-              </p>
+                    </li>
+                  ))}
+                </ul>
+              )
             ) : (
               <>
-                <p className="mb-1.5 text-[11px] text-faint">
-                  クリックすると、その式をテンプレとして読み込みます。
-                  {entries.length > HISTORY_VISIBLE &&
-                    `新しい${HISTORY_VISIBLE}件だけを表示しています（残りは上の検索から）。`}
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {entries.slice(0, HISTORY_VISIBLE).map((entry) => (
+                {/* The shelves run off the edge of a phone on purpose: a wrapped
+                    block of twelve tabs would push the templates off-screen.
+                    On wider screens they wrap and all stay in sight. */}
+                <div className="scroll-row -mx-5 overflow-x-auto px-5 sm:mx-0 sm:overflow-visible sm:px-0">
+                  <div className="flex w-max gap-1.5 pb-0.5 sm:w-auto sm:flex-wrap">
+                    {PRESET_SHELVES.map((shelf) => {
+                      const active = presetShelf === shelf;
+                      return (
+                        <button
+                          key={shelf ?? "all"}
+                          onClick={() => setPresetShelf(shelf)}
+                          aria-pressed={active}
+                          className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
+                            active
+                              ? "bg-fg text-white"
+                              : "bg-raised text-muted hover:text-fg"
+                          }`}
+                        >
+                          {shelf ?? "おすすめ"}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <ul className="grid gap-2 sm:grid-cols-2">
+                  {todaysPresets.map((preset) => (
+                    <li key={preset.id} className="min-w-0">
+                      <button
+                        onClick={() => applyPreset(preset)}
+                        className="group flex h-full w-full flex-col gap-1 rounded-2xl bg-raised px-4 py-3 text-left transition hover:bg-accentSoft"
+                      >
+                        <span className="line-clamp-1 text-[14px] font-semibold leading-snug text-fg transition group-hover:text-accent">
+                          {preset.label}
+                        </span>
+                        <span className="line-clamp-2 text-[12px] leading-relaxed text-muted">
+                          {presetSummary(preset)}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-[12px] text-muted">
+                    候補は1日に1回入れ替わります。
+                  </p>
+                  <button
+                    onClick={() => setPresetRound((round) => round + 1)}
+                    className={subtleButtonClass}
+                  >
+                    <RefreshIcon size={14} />
+                    別の候補を見る
+                  </button>
+                </div>
+              </>
+            )}
+          </Card>
+
+          <Card
+            step={1}
+            title="式をつくる"
+            hint="打ち込むと、プレビューがその場で変わります"
+            action={
+              <button onClick={confirmReset} className={resetButtonClass}>
+                <TrashIcon size={14} />
+                入力をリセット
+              </button>
+            }
+          >
+            <Group label="結果（左側）" note="いちばん伝えたい答え">
+              <Field
+                value={config.resultText}
+                onChange={(value) => update({ resultText: value })}
+                placeholder="例：元気（伝えたい結論）"
+                limit={LIMITS.resultText}
+              />
+            </Group>
+
+            <Group label="つなぐ記号" note="左と右の関係">
+              <div className="flex flex-wrap items-center gap-2">
+                {RELATIONS.map((relation) => (
+                  <button
+                    key={relation}
+                    onClick={() => {
+                      setCustomRelation(false);
+                      update({ relation });
+                    }}
+                    aria-pressed={!customRelation && config.relation === relation}
+                    aria-label={`関係記号 ${relation}`}
+                    className={symbolChipClass(
+                      !customRelation && config.relation === relation,
+                    )}
+                  >
+                    {relation}
+                  </button>
+                ))}
+                <button
+                  onClick={() => {
+                    setCustomRelation(true);
+                    update({ relation: "" });
+                  }}
+                  aria-pressed={customRelation}
+                  className={`${symbolChipClass(customRelation)} !w-auto shrink-0 whitespace-nowrap px-3.5 text-[13px]`}
+                >
+                  その他
+                </button>
+                {customRelation && (
+                  <input
+                    type="text"
+                    value={config.relation}
+                    maxLength={LIMITS.relation}
+                    placeholder="≒"
+                    aria-label="関係記号を直接入力（1文字）"
+                    onChange={(e) =>
+                      update({
+                        relation: Array.from(e.target.value).slice(-1).join(""),
+                      })
+                    }
+                    className={`${fieldClass} w-[60px] shrink-0 px-2 text-center`}
+                  />
+                )}
+              </div>
+              <Hint>
+                「A ＝ B × C」のような等式も、「A ＞ B」のような比較も。「その他」を選ぶと好きな記号を1文字入力できます。
+              </Hint>
+            </Group>
+
+            <Group
+              label="右側の要素"
+              note="答えの理由になることば"
+              action={
+                <span className="font-mono text-[12px] text-muted">
+                  {config.elements.length} / {MAX_ELEMENTS}
+                </span>
+              }
+            >
+              <div className="space-y-2">
+                {config.elements.map((element, index) => {
+                  const custom =
+                    customOps[index] ??
+                    (!!element.op && !isPresetOperator(element.op));
+                  return (
+                    <div key={index} className="flex items-center gap-2">
+                      <span
+                        className="w-4 shrink-0 text-center font-mono text-[12px] text-faint"
+                        aria-hidden
+                      >
+                        {index + 1}
+                      </span>
+                      {/* The first element normally has nothing in front of it, so
+                          the picker only appears once a bracket is asked for. */}
+                      <div
+                        className={`relative shrink-0 ${index === 0 && !leadOp ? "hidden" : ""}`}
+                      >
+                        <select
+                          value={custom ? CUSTOM_OP : element.op}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setOperatorMode(index, value === CUSTOM_OP);
+                            updateElement(index, {
+                              op: value === CUSTOM_OP ? "" : value,
+                            });
+                          }}
+                          aria-label={`要素 ${index + 1} の前の記号`}
+                          className={`${fieldClass} w-[78px] appearance-none pl-3 pr-6 text-center text-[16px]`}
+                        >
+                          {index === 0 && <option value="">なし</option>}
+                          {OPERATOR_GROUPS.map((group) => (
+                            <optgroup key={group.label} label={group.label}>
+                              {group.ops.map((op) => (
+                                <option key={op} value={op}>
+                                  {op}
+                                </option>
+                              ))}
+                            </optgroup>
+                          ))}
+                          <option value={CUSTOM_OP}>その他…</option>
+                        </select>
+                        <ChevronIcon />
+                      </div>
+                      {custom && (
+                        <input
+                          type="text"
+                          value={element.op}
+                          maxLength={LIMITS.operator}
+                          placeholder="＝"
+                          aria-label={`要素 ${index + 1} の演算子を直接入力（1文字）`}
+                          onChange={(e) =>
+                            updateElement(index, {
+                              op: Array.from(e.target.value).slice(-1).join(""),
+                            })
+                          }
+                          className={`${fieldClass} w-[50px] shrink-0 px-1 text-center font-mono`}
+                        />
+                      )}
+                      <input
+                        type="text"
+                        value={element.text}
+                        placeholder={`例：${String.fromCharCode(66 + (index % 25))}`}
+                        aria-label={`要素 ${index + 1} のことば`}
+                        maxLength={LIMITS.element}
+                        onChange={(e) =>
+                          updateElement(index, { text: e.target.value })
+                        }
+                        className={`${fieldClass} min-w-0 flex-1`}
+                      />
+                      <button
+                        onClick={() => removeElement(index)}
+                        disabled={config.elements.length <= 1}
+                        aria-label={`要素 ${index + 1} を削除`}
+                        title="この要素を削除"
+                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-faint transition hover:bg-danger/10 hover:text-danger disabled:cursor-not-allowed disabled:text-faint/35 disabled:hover:bg-transparent disabled:hover:text-faint/35"
+                      >
+                        <TrashIcon size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+              <button
+                onClick={addElement}
+                disabled={config.elements.length >= MAX_ELEMENTS}
+                className="mt-2 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-control py-2.5 text-[13px] font-medium text-muted transition hover:border-accent hover:bg-accentSoft hover:text-accent disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:bg-transparent disabled:hover:text-faint/60"
+              >
+                <PlusIcon size={15} />
+                {config.elements.length >= MAX_ELEMENTS
+                  ? `要素は${MAX_ELEMENTS}つまで`
+                  : "要素を追加"}
+              </button>
+              <button
+                onClick={() => {
+                  if (leadOp) {
+                    setOperatorMode(0, false);
+                    updateElement(0, { op: "" });
+                  }
+                  setShowLeadOp(!leadOp);
+                }}
+                className="mt-2 text-[12px] text-muted underline-offset-2 transition hover:text-accent hover:underline"
+              >
+                {leadOp
+                  ? "要素1の前の記号をなくす"
+                  : "要素1の前にも記号を入れる（括弧など）"}
+              </button>
+              <Hint>
+                2つ目以降の左のプルダウンは、その要素の前に入る記号です（計算 / 比較 / 括弧）。
+                <br />
+                括弧の例：200 ＝（3 ＋ 7）× 20　※「）」だけの行はことばを空に。
+              </Hint>
+            </Group>
+          </Card>
+
+          <Card step={2} title="ことばをそえる" hint="どれも省略できます">
+            <Group label="補足" note="画像の下に入る一言">
+              <Field
+                value={config.subNote}
+                onChange={(value) => update({ subNote: value })}
+                placeholder={"例：※式の意味や注釈を一言で。\n長い文章も自動で折り返します。"}
+                limit={LIMITS.subNote}
+                multiline
+              />
+            </Group>
+
+            <Group label="ハッシュタグ" note="画像の左下に入ります">
+              <Field
+                value={config.hashtags}
+                onChange={(value) => update({ hashtags: value })}
+                placeholder="例：#ことばの方程式 #タグ"
+                limit={LIMITS.hashtags}
+              />
+              <Hint>
+                スペース区切りで複数入力できます。# は自動で付き、X への投稿文にも入ります。
+                <br />
+                「#ことばの方程式」は最初から入っています。不要なら消してください。
+              </Hint>
+            </Group>
+
+            <Group label="アカウント名・ロゴ" note="画像の右下と左上">
+              <Field
+                value={config.author}
+                onChange={(value) => update({ author: value })}
+                placeholder="例：@your_account（空欄でもOK）"
+                limit={LIMITS.author}
+              />
+              <div className="mt-2.5 space-y-2">
+                <Toggle
+                  checked={config.showWatermark}
+                  onChange={(checked) => update({ showWatermark: checked })}
+                  label="画像に「ことばの方程式」のロゴを入れる"
+                />
+                <Toggle
+                  checked={config.showCopyright}
+                  onChange={(checked) => update({ showCopyright: checked })}
+                  label={`© 表記を付ける（© ${new Date().getFullYear()} ${config.author || "you"}）`}
+                />
+                {unlockedRank && unlockRule && (
+                  <>
+                    <Toggle
+                      checked={config.logoRank === unlockedRank}
+                      onChange={(checked) =>
+                        update({ logoRank: checked ? unlockedRank : "brand" })
+                      }
+                      label={`${unlockRule.label}にする（チップを送った方限定）`}
+                      disabled={!config.showWatermark}
+                    />
+                    <p className="text-[12px] leading-snug text-[#8A6A1C]">
+                      ✦ 解錠中：
+                      {supporter.left === null
+                        ? `あと約${supporter.hoursLeft}時間`
+                        : `のこり${supporter.left}枚（あと約${Math.max(
+                            1,
+                            Math.round(supporter.hoursLeft / 24),
+                          )}日）`}
+                      。書き出した画像の枚数ぶんだけ使えます。
+                    </p>
+                  </>
+                )}
+              </div>
+              <Hint>
+                ロゴは外せます。外すと左上に何も入らない画像になります（商用利用も自由です）。
+              </Hint>
+            </Group>
+          </Card>
+
+          <Card step={3} title="見た目をととのえる" hint="迷ったらそのままでOK">
+            <div className="grid gap-5 sm:grid-cols-2">
+              <Group label="書体">
+                <div className="grid grid-cols-2 gap-2">
+                  {(Object.keys(CANVAS_FONTS) as CanvasFontId[]).map((id) => (
                     <button
-                      key={entry.id}
-                      onClick={() => restore(entry)}
-                      className={`${chipClass} max-w-full truncate`}
-                      title={summarize(entry)}
+                      key={id}
+                      onClick={() => update({ fontId: id })}
+                      aria-pressed={config.fontId === id}
+                      className={choiceClass(config.fontId === id)}
                     >
-                      {summarize(entry)}
+                      {CANVAS_FONTS[id].label}
                     </button>
                   ))}
                 </div>
+              </Group>
+
+              <Group label="配色">
+                <div className="grid grid-cols-3 gap-2">
+                  {THEMES.map((theme) => (
+                    <button
+                      key={theme.id}
+                      onClick={() => update({ themeId: theme.id })}
+                      aria-pressed={config.themeId === theme.id}
+                      className={`${choiceClass(config.themeId === theme.id)} flex items-center justify-center gap-2 px-2`}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full border border-black/15"
+                        style={{ backgroundColor: theme.swatch }}
+                      />
+                      {theme.name}
+                    </button>
+                  ))}
+                </div>
+              </Group>
+
+              <div className="sm:col-span-2">
+                <Group label="ならべ方">
+                  <div className="grid grid-cols-3 gap-2 sm:max-w-md">
+                    {LAYOUTS.map((layout) => (
+                      <button
+                        key={layout.id}
+                        onClick={() => update({ layoutId: layout.id })}
+                        aria-pressed={config.layoutId === layout.id}
+                        title={layout.hint}
+                        className={`${choiceClass(config.layoutId === layout.id)} px-2`}
+                      >
+                        {layout.label}
+                      </button>
+                    ))}
+                  </div>
+                  <Hint>自動はできる限り横1行。入り切らない式だけ上下に分けます。</Hint>
+                </Group>
+              </div>
+            </div>
+
+            <Group
+              label="微調整"
+              note="自動レイアウトの上書き"
+              action={
                 <button
-                  onClick={clear}
-                  className="mt-2 text-[11px] text-faint transition hover:text-danger"
+                  onClick={() => update({ textScale: 1, marginScale: 1 })}
+                  disabled={config.textScale === 1 && config.marginScale === 1}
+                  className={`${subtleButtonClass} disabled:cursor-not-allowed disabled:border-line disabled:text-faint/60 disabled:hover:border-line disabled:hover:text-faint/60`}
                 >
-                  履歴を削除
+                  もとに戻す
                 </button>
-              </>
-            )}
-          </Section>
+              }
+            >
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Slider
+                  label="文字の大きさ"
+                  value={config.textScale}
+                  range={TEXT_SCALE}
+                  onChange={(value) => update({ textScale: value })}
+                />
+                <Slider
+                  label="左右の余白"
+                  value={config.marginScale}
+                  range={MARGIN_SCALE}
+                  onChange={(value) => update({ marginScale: value })}
+                />
+              </div>
+              <Hint>
+                文字数が多い式は自動で縮小されます。もう少し大きく／余白を狭くしたいときだけ動かしてください（はみ出す手前で自動的に止まります）。
+              </Hint>
+            </Group>
+          </Card>
 
-        </div>
-      </div>
-
-      {/* The last step of the whole tool, so it sits after every setting
-          instead of in the middle of the form. */}
-      <div className="order-4 min-w-0 lg:col-start-1 lg:row-start-3">
-        <div className="rounded-2xl border border-line bg-panel shadow-card">
-          <Section
-            index="⑧"
-            icon={<SaveIcon size={14} />}
-            label="できた画像を使う"
-          >
+          {/* The last step of the whole tool, so it sits after every setting
+              instead of in the middle of the form. */}
+          <Card step={4} title="画像を書き出す" hint="コピーすればそのまま投稿に貼れます">
             {/* Copying straight into a post is the most common finish, so it
                 leads; X only opens a compose window, so it sits last. */}
             <div className="grid gap-2 sm:grid-cols-[1.4fr_1fr_1fr]">
               {canCopy && (
                 <button
                   onClick={() => void handleCopy()}
-                  className={`${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`}
+                  className={`${primaryButtonClass} w-full px-5 py-3.5 text-[15px]`}
                 >
-                  <CopyIcon size={15} />
+                  <CopyIcon size={16} />
                   画像をコピー
                 </button>
               )}
@@ -1317,59 +1058,328 @@ export default function Editor() {
                 className={
                   canCopy
                     ? `${secondaryButtonClass} w-full`
-                    : `${primaryButtonClass} w-full px-5 py-3.5 text-[14px]`
+                    : `${primaryButtonClass} w-full px-5 py-3.5 text-[15px]`
                 }
               >
-                <SaveIcon size={15} />
+                <SaveIcon size={16} />
                 {saveLabel}
               </button>
               <button
                 onClick={() => void handleShare()}
                 className={`${quietButtonClass} w-full`}
               >
-                <XIcon size={14} />
-                X でシェア
+                <XIcon size={15} />X でシェア
               </button>
             </div>
-            {/* Publishing is a separate, deliberate press: everything else on
-                this page keeps the text inside the browser. */}
-            {wall.enabled && (
-              <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line pt-2.5">
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line pt-3.5">
+              {/* Two explicit choices read faster than one checkbox whose
+                  unchecked meaning has to be inferred. */}
+              <div className="flex items-center gap-2">
+                <span className="text-[13px] text-muted">この式を履歴に</span>
+                <div className="inline-flex gap-1 rounded-full bg-raised p-1">
+                  <button
+                    onClick={() => setKeepHistory(true)}
+                    aria-pressed={keepHistory}
+                    className={segmentClass(keepHistory)}
+                  >
+                    残す
+                  </button>
+                  <button
+                    onClick={() => setKeepHistory(false)}
+                    aria-pressed={!keepHistory}
+                    className={segmentClass(!keepHistory)}
+                  >
+                    残さない
+                  </button>
+                </div>
+              </div>
+              {/* Publishing is a separate, deliberate press: everything else on
+                  this page keeps the text inside the browser. */}
+              {wall.enabled && (
                 <button
                   onClick={() => void handlePublish()}
                   disabled={publishing}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-edge px-2.5 py-1.5 text-[11px] font-medium text-muted transition hover:border-accent/50 hover:text-accent disabled:cursor-not-allowed disabled:text-faint/60"
+                  className={`${subtleButtonClass} disabled:cursor-not-allowed disabled:text-faint/60`}
                 >
-                  <UsersIcon size={12} />
+                  <UsersIcon size={13} />
                   {publishing ? "公開しています…" : "みんなの式に載せる（任意）"}
                 </button>
-                <span className="text-[11px] text-faint">
-                  ことばだけが公開されます。名前・画像・履歴は送られません。
-                </span>
-              </div>
-            )}
-            <div aria-live="polite" className="min-h-[28px]">
-              {status && (
-                <p
-                  className={`mt-2 flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] leading-snug ${
-                    status.tone === "ok"
-                      ? "bg-accent/8 text-accent"
-                      : "bg-danger/8 text-danger"
-                  }`}
-                >
-                  {status.tone === "ok" ? (
-                    <CheckIcon size={13} />
-                  ) : (
-                    <AlertIcon size={13} />
-                  )}
-                  <span className="min-w-0">{status.text}</span>
-                </p>
               )}
             </div>
-          </Section>
+            <p className="mt-2 text-[12px] leading-relaxed text-muted">
+              履歴はこの端末のブラウザにだけ、直近{HISTORY_LIMIT}件まで残ります。
+              {wall.enabled &&
+                "「みんなの式に載せる」を押したときだけ、ことばが公開されます（名前・画像・履歴は送られません）。"}
+            </p>
+          </Card>
+
+          <Card
+            icon={<ClockIcon size={17} />}
+            title="あとから使う"
+            tone="info"
+            hint="この端末に残った式と、公開された式"
+          >
+            <Group
+              label="直近の履歴"
+              action={
+                entries.length > 0 ? (
+                  <button
+                    onClick={clear}
+                    className="text-[12px] text-muted transition hover:text-danger"
+                  >
+                    履歴を削除
+                  </button>
+                ) : undefined
+              }
+            >
+              {entries.length === 0 ? (
+                <p className="text-[12px] text-muted">
+                  画像を保存すると、この端末に最大{HISTORY_LIMIT}件が残ります（テンプレとして使えます）。
+                </p>
+              ) : (
+                <>
+                  <p className="mb-2 text-[12px] text-muted">
+                    クリックすると、その式をテンプレとして読み込みます。
+                    {entries.length > HISTORY_VISIBLE &&
+                      `新しい${HISTORY_VISIBLE}件だけを表示しています（残りは上の検索から）。`}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {entries.slice(0, HISTORY_VISIBLE).map((entry) => (
+                      <button
+                        key={entry.id}
+                        onClick={() => restore(entry)}
+                        className={`${chipClass} max-w-full truncate`}
+                        title={summarize(entry)}
+                      >
+                        {summarize(entry)}
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </Group>
+
+            {wall.enabled && (
+              <Group label="みんなの式" note="ほかの人が公開したもの">
+                {wall.loading ? (
+                  <p className="text-[12px] text-muted">読み込んでいます…</p>
+                ) : wall.items.length === 0 ? (
+                  <p className="text-[12px] text-muted">
+                    まだ公開された式がありません。「画像を書き出す」から公開できます。
+                  </p>
+                ) : (
+                  <>
+                    <p className="mb-2 text-[12px] text-muted">
+                      クリックすると、その式を下書きとして読み込みます（読みやすい式だけを選んで表示しています）。
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {wall.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => adoptShared(item)}
+                          className={`${chipClass} max-w-full truncate`}
+                          title={`${galleryText(item)}（${relativeTime(item.createdAt)}）`}
+                        >
+                          {galleryText(item)}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </Group>
+            )}
+          </Card>
+
+          <p className="px-1 text-[12px] leading-relaxed text-muted">
+            入力中の内容はこのブラウザに自動保存され、次に開いたときそのまま続けられます。
+          </p>
+        </div>
+
+        {/* On phones the preview is pinned under the header; the band behind it is
+            opaque so scrolling content never shows through the gap. */}
+        <div className="sticky top-[52px] z-10 order-1 -mx-4 min-w-0 bg-ink px-4 pb-2 pt-2 lg:order-none lg:col-start-2 lg:row-start-1 lg:mx-0 lg:self-start lg:bg-transparent lg:px-0 lg:pb-0 lg:pt-0 lg:top-[72px]">
+          <div
+            className={`rounded-card bg-panel transition-shadow duration-300 ${
+              justUpdated
+                ? "shadow-[0_0_0_1.5px_rgba(0,113,227,0.5)]"
+                : "shadow-card"
+            }`}
+          >
+            {/* One recommended size is enough for most posts, so the rest stay
+                behind a disclosure instead of a row of five choices. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-3.5 py-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-accentSoft px-2.5 py-1 text-[13px] font-semibold text-accent">
+                  <FrameIcon size={14} />
+                  {size.label}
+                </span>
+                <span className="hidden truncate text-[12px] text-muted sm:block">
+                  {isRecommendedSize(config.sizeId) ? "スマホ投稿の王道サイズ" : size.hint}
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <button onClick={openZoom} className={`${subtleButtonClass} px-3`}>
+                  <ExpandIcon size={14} />
+                  拡大
+                </button>
+                <button
+                  onClick={() => setShowSizes((previous) => !previous)}
+                  aria-expanded={showSizes}
+                  className={`${subtleButtonClass} px-3`}
+                >
+                  <span>
+                    サイズ<span className="hidden sm:inline">を変える</span>
+                  </span>
+                </button>
+                {/* Folding the pinned preview away gives the form the whole
+                    screen while typing on a phone. */}
+                <button
+                  onClick={() => setHidePreview((previous) => !previous)}
+                  aria-expanded={!hidePreview}
+                  className={`${subtleButtonClass} px-3 lg:hidden`}
+                >
+                  {hidePreview ? "ひらく" : "たたむ"}
+                </button>
+              </div>
+            </div>
+            {showSizes && (
+              <div className="border-b border-line px-3.5 py-2.5">
+                <div className="flex flex-wrap gap-2">
+                  {SIZES.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => update({ sizeId: item.id })}
+                      aria-pressed={config.sizeId === item.id}
+                      title={item.hint}
+                      className={`${choiceClass(config.sizeId === item.id)} py-2`}
+                    >
+                      {item.label}
+                      {item.id === RECOMMENDED_SIZE && (
+                        <span className="ml-1.5 text-[11px] text-muted">王道</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-2 text-[12px] leading-snug text-muted">
+                  迷ったら 4:5 のままでOK。ストーリーやTikTokは 9:16、ブログの見出し画像は 16:9 が向いています。
+                </p>
+              </div>
+            )}
+            <div
+              className={`w-full items-center justify-center p-3 sm:p-6 lg:p-7 ${hidePreview ? "hidden lg:flex" : "flex"}`}
+            >
+              <button
+                onClick={openZoom}
+                aria-label="プレビューを拡大して見る"
+                className="group relative flex max-w-full cursor-zoom-in items-center justify-center"
+              >
+                <canvas
+                  ref={canvasRef}
+                  aria-label="生成された思考式の画像"
+                  className="max-h-[30vh] w-auto max-w-full rounded-xl shadow-lift transition-transform duration-300 group-hover:scale-[1.01] sm:max-h-[42vh] lg:max-h-[52vh]"
+                />
+                <span className="pointer-events-none absolute bottom-2 right-2 hidden items-center gap-1 rounded-full bg-fg/70 px-2 py-1 text-[11px] font-medium text-white opacity-0 transition group-hover:opacity-100 sm:inline-flex">
+                  <ExpandIcon size={12} />
+                  拡大
+                </span>
+              </button>
+            </div>
+            {/* The pinned preview is the point of this card on a phone, so the
+                buttons stay folded until someone asks for them. */}
+            <div
+              className={`border-t border-line px-3 py-2 lg:hidden ${hidePreview ? "hidden" : ""}`}
+            >
+              {pinActions ? (
+                <div className="flex items-center gap-2">
+                  {canCopy && (
+                    <button
+                      onClick={() => void handleCopy()}
+                      className={`${primaryButtonClass} flex-1 px-3 py-2.5 text-[13px]`}
+                    >
+                      <CopyIcon size={15} />
+                      画像をコピー
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void handleDownload()}
+                    className={
+                      canCopy
+                        ? `${secondaryButtonClass} shrink-0 px-3 py-2.5 text-[13px]`
+                        : `${primaryButtonClass} flex-1 px-3 py-2.5 text-[13px]`
+                    }
+                  >
+                    <SaveIcon size={15} />
+                    {saveLabel}
+                  </button>
+                  <button
+                    onClick={() => setPinActions(false)}
+                    aria-label="ボタンをたたむ"
+                    className="shrink-0 rounded-full px-2 py-2 text-[13px] text-muted transition hover:text-fg"
+                  >
+                    ▲
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setPinActions(true)}
+                  aria-expanded={false}
+                  className="w-full rounded-full py-1.5 text-[12px] font-medium text-muted transition hover:text-fg"
+                >
+                  保存・コピーのボタンを出す ▼
+                </button>
+              )}
+            </div>
+            {/* On a desktop the export buttons follow the preview so they are
+                reachable without scrolling back down the form. */}
+            <div className="hidden border-t border-line px-3.5 py-3 lg:block">
+              <div className="flex items-center gap-2">
+                {canCopy && (
+                  <button
+                    onClick={() => void handleCopy()}
+                    className={`${primaryButtonClass} flex-1`}
+                  >
+                    <CopyIcon size={16} />
+                    画像をコピー
+                  </button>
+                )}
+                <button
+                  onClick={() => void handleDownload()}
+                  className={
+                    canCopy
+                      ? `${secondaryButtonClass} shrink-0`
+                      : `${primaryButtonClass} flex-1`
+                  }
+                >
+                  <SaveIcon size={16} />
+                  {saveLabel}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* One place for feedback, pinned to the viewport so it is seen wherever
+          the button that caused it was pressed. */}
+      <div
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4"
+      >
+        {status && (
+          <p
+            className={`flex max-w-md items-center gap-2 rounded-full px-4 py-2.5 text-[13px] leading-snug shadow-lift ${
+              status.tone === "ok"
+                ? "bg-fg text-white"
+                : "bg-danger text-white"
+            }`}
+          >
+            {status.tone === "ok" ? <CheckIcon size={15} /> : <AlertIcon size={15} />}
+            <span className="min-w-0">{status.text}</span>
+          </p>
+        )}
       </div>
+
       {zoomSrc && (
         <PreviewDialog
           src={zoomSrc}
@@ -1388,34 +1398,44 @@ export default function Editor() {
 }
 
 // text-base on mobile keeps iOS Safari from zooming in when a field is focused.
-// A 1.5px control border plus the inset shadow is what separates a field from
-// the white card behind it.
+// A hairline border is all that separates a field from the white card behind
+// it; the ring appears only on focus.
 const fieldClass =
-  "h-10 rounded-lg border-[1.5px] border-control bg-white px-3 text-base text-fg shadow-field outline-none transition placeholder:text-faint hover:border-accent/70 focus:border-accent focus:shadow-none focus:ring-[3px] focus:ring-accent/20 sm:text-[13px]";
+  "h-11 rounded-xl border border-control bg-panel px-3.5 text-base text-fg outline-none transition placeholder:text-faint hover:border-faint focus:border-accent focus:ring-[3px] focus:ring-accent/25 sm:text-[15px]";
 
-/** Destructive actions share one red outline so they are never mistaken for
- *  the blue "choose this" controls. */
+/** Destructive actions are the only red text on the page. */
 const resetButtonClass =
-  "inline-flex items-center gap-1.5 rounded-md border-[1.5px] border-danger/40 bg-danger/5 px-2.5 py-1.5 text-[11px] font-medium text-danger transition hover:border-danger hover:bg-danger/10";
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium text-danger transition hover:bg-danger/10";
+
+/** Quiet grey pill for the small actions that sit next to a heading. */
+const subtleButtonClass =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full bg-raised px-3.5 py-1.5 text-[12px] font-medium text-fg transition hover:bg-edge/60";
 
 const chipClass =
-  "rounded-md border-[1.5px] border-control bg-panel px-2.5 py-1.5 text-[12px] font-medium text-fg transition hover:border-accent hover:text-accent";
+  "rounded-full bg-raised px-3.5 py-2 text-[13px] font-medium text-fg transition hover:bg-accentSoft hover:text-accent";
 
 /** Square, glyph-first button used for the relation symbols. */
 function symbolChipClass(active: boolean) {
-  return `flex h-10 w-10 items-center justify-center rounded-lg border-[1.5px] text-[15px] font-medium transition ${
+  return `flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border text-[17px] font-medium transition ${
     active
-      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
-      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
+      ? "border-accent bg-accentSoft text-accent"
+      : "border-transparent bg-raised text-fg hover:bg-edge/60"
   }`;
 }
 
 /** Same treatment for every 「選ぶ」 button (font, layout, theme, size). */
 function choiceClass(active: boolean) {
-  return `rounded-lg border-[1.5px] px-3 py-2 text-[12px] font-medium transition ${
+  return `rounded-xl border px-3 py-2.5 text-[13px] font-medium transition ${
     active
-      ? "border-accent bg-accent/10 text-accent shadow-[inset_0_0_0_1px_rgba(11,107,203,0.35)]"
-      : "border-control bg-panel text-fg hover:border-accent hover:text-accent"
+      ? "border-accent bg-accentSoft text-accent"
+      : "border-transparent bg-raised text-fg hover:bg-edge/60"
+  }`;
+}
+
+/** Two halves of one switch, so the unchosen side still reads as available. */
+function segmentClass(active: boolean) {
+  return `rounded-full px-3.5 py-1.5 text-[13px] font-medium transition ${
+    active ? "bg-panel text-fg shadow-card" : "text-muted hover:text-fg"
   }`;
 }
 
@@ -1423,14 +1443,20 @@ function choiceClass(active: boolean) {
  * Secondary copy lives behind a disclosure: the people who need it can open it,
  * everyone else keeps a shorter form.
  */
-function Hint({ children, label = "詳しい説明" }: { children: React.ReactNode; label?: string }) {
+function Hint({
+  children,
+  label = "詳しい説明",
+}: {
+  children: React.ReactNode;
+  label?: string;
+}) {
   return (
     <details className="mt-2">
-      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[11px] font-medium text-muted transition hover:text-accent">
-        <InfoIcon size={12} />
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-[12px] font-medium text-muted transition hover:text-accent">
+        <InfoIcon size={13} />
         {label}
       </summary>
-      <div className="mt-1.5 text-[11px] leading-snug text-faint">{children}</div>
+      <div className="mt-1.5 text-[12px] leading-relaxed text-muted">{children}</div>
     </details>
   );
 }
@@ -1469,9 +1495,9 @@ function Slider({
 }) {
   return (
     <label className="block">
-      <span className="flex items-baseline justify-between text-[12px] text-muted">
+      <span className="flex items-baseline justify-between text-[13px] text-fg">
         {label}
-        <span className="font-mono text-[11px] text-faint">
+        <span className="font-mono text-[12px] text-muted">
           {Math.round(value * 100)}%
         </span>
       </span>
@@ -1482,7 +1508,7 @@ function Slider({
         step={range.step}
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="mt-1.5 h-2 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
+        className="mt-2 h-2 w-full cursor-pointer appearance-none rounded-full bg-edge accent-accent"
       />
     </label>
   );
@@ -1490,13 +1516,13 @@ function Slider({
 
 /** One filled button leads; the rest stay quiet so the main action is obvious. */
 const primaryButtonClass =
-  "inline-flex items-center justify-center gap-2 rounded-lg bg-accent px-4 py-3 text-[13px] font-semibold text-white shadow-[0_2px_6px_rgba(11,107,203,0.22)] transition hover:bg-accentDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
+  "inline-flex items-center justify-center gap-2 rounded-full bg-accent px-5 py-3 text-[15px] font-semibold text-white transition hover:bg-accentDark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]";
 
 const secondaryButtonClass =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg border-[1.5px] border-control bg-panel px-4 py-3 text-[13px] font-semibold text-fg transition hover:border-accent hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px";
+  "inline-flex items-center justify-center gap-1.5 rounded-full bg-raised px-5 py-3 text-[15px] font-semibold text-fg transition hover:bg-edge/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-[0.99]";
 
 const quietButtonClass =
-  "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 py-2.5 text-[12px] font-medium text-muted transition hover:bg-raised hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+  "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-3 text-[14px] font-medium text-muted transition hover:bg-raised hover:text-fg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 function Field({
   value,
@@ -1522,7 +1548,7 @@ function Field({
           placeholder={placeholder}
           rows={3}
           onChange={(e) => onChange(e.target.value.replace(/\n/g, ""))}
-          className={`${fieldClass} h-auto w-full resize-y py-2 leading-relaxed`}
+          className={`${fieldClass} !h-auto w-full resize-y py-2.5 leading-relaxed`}
         />
       ) : (
         <input
@@ -1535,7 +1561,7 @@ function Field({
         />
       )}
       <p
-        className={`mt-1 text-right font-mono text-[10px] ${
+        className={`mt-1 text-right font-mono text-[11px] ${
           count >= limit ? "text-accent" : "text-faint"
         }`}
       >
@@ -1558,10 +1584,8 @@ function Toggle({
 }) {
   return (
     <label
-      className={`flex items-center gap-2 rounded-md border-[1.5px] border-control bg-panel px-2.5 py-2 text-[11px] transition ${
-        disabled
-          ? "cursor-not-allowed text-faint"
-          : "cursor-pointer text-fg hover:border-accent/70"
+      className={`flex items-center gap-2.5 rounded-xl bg-raised px-3.5 py-3 text-[14px] transition ${
+        disabled ? "cursor-not-allowed text-faint" : "cursor-pointer text-fg hover:bg-edge/50"
       }`}
     >
       <input
@@ -1577,55 +1601,79 @@ function Toggle({
 }
 
 /**
- * Icon colours follow one rule: blue for anything you fill in or choose, grey
- * for read-only lists. Gold is reserved for donations and red for destructive
- * actions, so the palette never grows past four meanings.
+ * One step of the tool. A numbered badge marks the steps that have to be worked
+ * through in order; the helper cards carry an icon instead.
  */
-function Section({
-  index,
+function Card({
+  step,
   icon,
-  label,
+  title,
   hint,
+  action,
   tone = "input",
   children,
 }: {
-  index?: string;
-  /** Small pictogram shown in a tinted tile, so sections are scannable. */
+  step?: number;
   icon?: React.ReactNode;
-  label: string;
+  title: string;
   hint?: string;
+  action?: React.ReactNode;
   tone?: "input" | "info";
   children: React.ReactNode;
 }) {
   return (
-    <section className="px-3.5 py-3.5">
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <h2
-          className={`flex min-w-0 items-center gap-2 ${
-            index
-              ? "text-[12px] font-semibold text-fg"
-              : "text-[11px] font-semibold text-muted"
-          }`}
-        >
-          {icon && (
+    <section className="rounded-card bg-panel shadow-card">
+      <div className="flex items-center gap-2.5 px-5 pt-5 sm:px-7 sm:pt-6">
+        {step !== undefined ? (
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent text-[13px] font-semibold text-white">
+            {step}
+          </span>
+        ) : (
+          icon && (
             <span
-              className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
-                tone === "input" ? "bg-accent/10 text-accent" : "bg-raised text-faint"
-              }`}
+              className={`shrink-0 ${tone === "input" ? "text-accent" : "text-faint"}`}
             >
               {icon}
             </span>
-          )}
-          <span className="truncate">
-            {index && <span className="mr-1 text-accent">{index}</span>}
-            {label}
-          </span>
-        </h2>
-        {hint && (
-          <span className="shrink-0 font-mono text-[10px] text-faint">{hint}</span>
+          )
         )}
+        <div className="min-w-0 flex-1">
+          <h2 className="text-[17px] font-semibold leading-tight text-fg">{title}</h2>
+        </div>
+        {action}
+      </div>
+      {hint && (
+        <p className="mt-1.5 px-5 text-[13px] leading-snug text-muted sm:px-7">{hint}</p>
+      )}
+      <div className="space-y-6 px-5 pb-6 pt-4 sm:px-7 sm:pb-7">{children}</div>
+    </section>
+  );
+}
+
+/** A labelled block inside a card: one label, one control, one optional note. */
+function Group({
+  label,
+  note,
+  action,
+  children,
+}: {
+  label: string;
+  note?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <div className="mb-2 flex items-end justify-between gap-2">
+        <h3 className="text-[14px] font-semibold text-fg">
+          {label}
+          {note && (
+            <span className="ml-2 text-[12px] font-normal text-faint">{note}</span>
+          )}
+        </h3>
+        {action}
       </div>
       {children}
-    </section>
+    </div>
   );
 }

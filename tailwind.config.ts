@@ -9,22 +9,23 @@ export default {
   theme: {
     extend: {
       colors: {
-        /** app shell */
-        ink: "#F1F4F8",
+        /** app shell: one near-white page, white cards, hairline borders */
+        ink: "#F5F5F7",
         panel: "#FFFFFF",
-        raised: "#F6F8FB",
-        line: "#E4E8EE",
-        edge: "#D3D9E2",
+        raised: "#F5F5F7",
+        line: "#E8E8ED",
+        edge: "#D2D2D7",
         /** border of anything you can type in or choose */
-        control: "#A9B6C8",
+        control: "#C9C9CE",
         /** text */
-        fg: "#151A22",
-        muted: "#556170",
-        faint: "#8A93A0",
+        fg: "#1D1D1F",
+        muted: "#6E6E73",
+        faint: "#86868B",
         /** accents */
-        accent: "#0B6BCB",
-        accentDark: "#08529E",
-        danger: "#C2453C",
+        accent: "#0071E3",
+        accentDark: "#0058B9",
+        accentSoft: "#EBF4FE",
+        danger: "#D0342C",
         /** donation call to action */
         coffee: "#FFDE47",
         coffeeDark: "#FFC400",
@@ -45,10 +46,13 @@ export default {
       letterSpacing: {
         brand: "0.22em",
       },
+      borderRadius: {
+        card: "18px",
+      },
       boxShadow: {
-        card: "0 1px 2px rgba(18, 26, 38, 0.04), 0 6px 18px rgba(18, 26, 38, 0.04)",
-        lift: "0 2px 4px rgba(18, 26, 38, 0.05), 0 16px 34px rgba(18, 26, 38, 0.08)",
-        field: "inset 0 1px 2px rgba(18, 26, 38, 0.035)",
+        card: "0 1px 2px rgba(0, 0, 0, 0.03)",
+        lift: "0 10px 34px rgba(0, 0, 0, 0.09)",
+        field: "none",
       },
     },
   },

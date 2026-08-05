@@ -3,7 +3,7 @@ import Editor from "@/components/Editor";
 import Reveal from "@/components/Reveal";
 import SiteHeader from "@/components/SiteHeader";
 import { donateButtonClass } from "@/components/DonateButton";
-import { BoltIcon, FreeIcon, InfoIcon, ShieldIcon } from "@/components/icons";
+import { BoltIcon, FreeIcon, ShieldIcon } from "@/components/icons";
 import {
   DONATE_ANCHOR,
   DONATE_CUSTOM_URL,
@@ -101,7 +101,7 @@ const FAQ = [
   {
     q: "入力した内容はサーバーに送られますか？",
     a: galleryEnabled
-      ? "⑧の「みんなの式に載せる」を押したときだけ、その式のことばが保存・公開されます。それ以外は送られず、画像の生成も履歴の保存もブラウザ内で完結します。"
+      ? "「画像を書き出す」の「みんなの式に載せる」を押したときだけ、その式のことばが保存・公開されます。それ以外は送られず、画像の生成も履歴の保存もブラウザ内で完結します。"
       : "送られません。画像の生成も履歴の保存もブラウザ内で完結します。入力した文字がサーバーに保存されることはありません。",
   },
   ...(galleryEnabled
@@ -167,92 +167,60 @@ export default function Home() {
 
       <SiteHeader />
 
-      <main className="mx-auto max-w-[1400px] px-4 pb-6 pt-2">
-        <div className="mb-7 text-center">
-          <p className="inline-flex items-center gap-1.5 rounded-full border border-edge bg-panel/70 px-3 py-1 text-[11px] font-medium text-muted shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden />
-            登録不要・無料・広告なし
-          </p>
+      <main className="mx-auto max-w-[1120px] px-4 pb-10 sm:px-6">
+        {/* Apple-style opening: one big line, one grey line, then the tool. */}
+        <div className="pb-8 pt-10 text-center sm:pb-12 sm:pt-16">
           {/* The brand name carries the h1 so a search for it lands here. */}
-          <h1 className="mt-3 text-[24px] font-semibold tracking-tight text-fg sm:text-[32px]">
-            <span className="relative whitespace-nowrap">
-              ことばの方程式
-              <span
-                className="absolute inset-x-0 bottom-0.5 -z-10 h-2.5 rounded-sm bg-gradient-to-r from-[#74B2FF]/30 to-[#8C65FF]/30"
-                aria-hidden
-              />
-            </span>
-            <span className="mt-1 block text-[15px] font-medium text-muted sm:text-[18px]">
-              思っていることを、1枚の画像にする無料ツール
-            </span>
+          <h1 className="text-[34px] font-semibold leading-[1.1] text-fg sm:text-[52px]">
+            ことばの方程式
           </h1>
-          <p className="mx-auto mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted">
-            「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も、スマホに合うサイズの1枚に。登録不要・無料で、そのままXやInstagramに投稿できます。
+          <p className="mx-auto mt-3 max-w-xl text-[17px] font-medium leading-relaxed text-muted sm:mt-4 sm:text-[21px]">
+            思っていることを、1枚の画像に。
+          </p>
+          <p className="mx-auto mt-2.5 max-w-xl text-balance text-[14px] leading-relaxed text-muted sm:text-[15px]">
+            「元気＝睡眠＋ごはん＋日光」のような式も、「今日＞昨日」のような比較も。登録不要・無料・広告なしで、そのままXやInstagramに投稿できます。
           </p>
         </div>
 
-        {/* Everyone who lands here wants the editor, so the pitch is folded away
-            and only opens for the people who ask for it. */}
-        <details className="mx-auto mb-6 max-w-3xl">
-          <summary className="mx-auto inline-flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-line bg-panel/70 px-3.5 py-1.5 text-[12px] font-medium text-muted shadow-sm transition hover:border-accent/50 hover:text-accent">
-            <InfoIcon size={13} />
-            このサイトについて
-          </summary>
-          <ul className="mt-2 grid gap-2 sm:grid-cols-3">
-            {POINTS.map((point) => (
-              <li
-                key={point.title}
-                className="flex items-start gap-2.5 rounded-xl border border-line bg-panel/70 px-3 py-2.5 shadow-sm"
-              >
-                <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  {point.icon}
-                </span>
-                <span className="min-w-0">
-                  <span className="block text-[12px] font-semibold text-fg">
-                    {point.title}
-                  </span>
-                  <span className="mt-0.5 block text-[11px] leading-snug text-muted">
-                    {point.body}
-                  </span>
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-center">
-            <Link
-              href="/about"
-              className="text-[11px] font-medium text-muted transition hover:text-accent"
-            >
-              名前の由来と運営の方針 →
-            </Link>
-          </p>
-        </details>
-
         <Editor />
 
+        {/* Three quiet lines instead of a boxed feature grid. */}
+        <ul className="mx-auto mt-16 grid max-w-4xl gap-8 text-center sm:grid-cols-3 sm:gap-10">
+          {POINTS.map((point) => (
+            <li key={point.title} className="flex flex-col items-center gap-2">
+              <span className="text-accent" aria-hidden>
+                {point.icon}
+              </span>
+              <span className="text-[15px] font-semibold text-fg">{point.title}</span>
+              <span className="max-w-xs text-[13px] leading-relaxed text-muted">
+                {point.body}
+              </span>
+            </li>
+          ))}
+        </ul>
+
         <Reveal className="mt-16">
-          <section className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8">
-            <h2 className="text-[15px] font-semibold text-fg">ことばの方程式とは</h2>
-            <p className="mt-1.5 max-w-3xl text-[13px] leading-relaxed text-muted">
+          <section className="rounded-card bg-panel p-7 shadow-card sm:p-10">
+            <h2 className="text-[24px] font-semibold text-fg sm:text-[28px]">
+              ことばの方程式とは
+            </h2>
+            <p className="mt-3 max-w-3xl text-[15px] leading-[1.8] text-muted">
               「ことばの方程式」は、思っていることを「元気＝睡眠＋ごはん＋日光」のような式や「今日＞昨日」のような比較のかたちにして、SNSにそのまま投稿できる画像にする無料のツールです。登録も、アプリのインストールも、料金もいりません。画像づくりはすべてブラウザの中で行われ、入力したことばはこの端末から出ません。
             </p>
-            <h3 className="mt-5 text-[13px] font-semibold text-fg">使い方</h3>
-            <ol className="mt-2 grid gap-2 text-[13px] leading-relaxed text-muted sm:grid-cols-3">
+            <h3 className="mt-9 text-[17px] font-semibold text-fg">使い方</h3>
+            <ol className="mt-3 grid gap-3 text-[14px] leading-relaxed text-muted sm:grid-cols-3">
               {STEPS.map((step, index) => (
-                <li
-                  key={step.title}
-                  className="rounded-xl border border-line bg-panel/70 px-3.5 py-3 shadow-sm"
-                >
-                  <span className="block text-[12px] font-semibold text-fg">
+                <li key={step.title} className="rounded-2xl bg-raised px-5 py-4">
+                  <span className="block text-[15px] font-semibold text-fg">
                     <span className="mr-1.5 text-accent">{index + 1}</span>
                     {step.title}
                   </span>
-                  <span className="mt-1 block text-[12px] leading-snug">{step.body}</span>
+                  <span className="mt-1.5 block text-[13px] leading-relaxed">{step.body}</span>
                 </li>
               ))}
             </ol>
-            <h3 className="mt-5 text-[13px] font-semibold text-fg">こんなときに</h3>
-            <ul className="mt-2 grid gap-1.5 text-[13px] leading-relaxed text-muted sm:grid-cols-2">
+            <h3 className="mt-9 text-[17px] font-semibold text-fg">こんなときに</h3>
+            <ul className="mt-3 grid gap-2 text-[15px] leading-relaxed text-muted sm:grid-cols-2">
               {USES.map((use) => (
                 <li key={use} className="flex gap-2">
                   <span className="text-accent" aria-hidden>
@@ -262,21 +230,21 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-[12px] text-muted">
-              <Link href="/about" className="font-medium transition hover:text-accent">
+            <p className="mt-7 text-[14px] text-muted">
+              <Link href="/about" className="font-medium text-accent transition hover:underline">
                 名前の由来と運営の方針 →
               </Link>
             </p>
           </section>
         </Reveal>
 
-        <Reveal className="mt-4">
+        <Reveal className="mt-5">
           {/* Folded away by default: the answers are for the few who look for
               them, and the donation section should stay within reach. */}
-          <details className="group rounded-2xl border border-line bg-panel shadow-card">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-6 py-4 sm:px-8">
-              <h2 className="text-[15px] font-semibold text-fg">よくある質問</h2>
-              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted transition group-hover:text-accent">
+          <details className="group rounded-card bg-panel shadow-card">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-7 py-5 sm:px-10">
+              <h2 className="text-[24px] font-semibold text-fg sm:text-[28px]">よくある質問</h2>
+              <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-muted transition group-hover:text-accent">
                 <span className="group-open:hidden">ひらく</span>
                 <span className="hidden group-open:inline">とじる</span>
                 <span className="transition-transform group-open:rotate-180" aria-hidden>
@@ -284,11 +252,11 @@ export default function Home() {
                 </span>
               </span>
             </summary>
-            <dl className="grid gap-6 border-t border-line px-6 py-5 sm:grid-cols-2 sm:px-8">
+            <dl className="grid gap-7 border-t border-line px-7 py-7 sm:grid-cols-2 sm:px-10">
               {FAQ.map((item) => (
                 <div key={item.q}>
-                  <dt className="text-[13px] font-medium text-fg">{item.q}</dt>
-                  <dd className="mt-1.5 text-[13px] leading-relaxed text-muted">{item.a}</dd>
+                  <dt className="text-[15px] font-semibold text-fg">{item.q}</dt>
+                  <dd className="mt-2 text-[14px] leading-[1.8] text-muted">{item.a}</dd>
                 </div>
               ))}
             </dl>
@@ -296,16 +264,18 @@ export default function Home() {
         </Reveal>
 
         {DONATE_ENABLED && (
-          <Reveal className="mt-4" delay={80}>
+          <Reveal className="mt-5" delay={80}>
           <section
             id={DONATE_ANCHOR}
-            className="scroll-mt-20 rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-8"
+            className="scroll-mt-20 rounded-card bg-panel p-7 shadow-card sm:p-10"
           >
-            <h2 className="text-[15px] font-semibold text-fg">このサイトにチップを送る</h2>
-            <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-muted">
+            <h2 className="text-[24px] font-semibold text-fg sm:text-[28px]">
+              このサイトにチップを送る
+            </h2>
+            <p className="mt-3 max-w-2xl text-[15px] leading-[1.8] text-muted">
               広告も、ログインも、有料プランもありません。運営費はチップだけでまかなっています（1回限り・見返りの商品はありません）。金額を選んでください。
             </p>
-            <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
               {DONATE_TIERS.map((tier) => (
                 <a
                   key={tier.amount}
@@ -315,16 +285,16 @@ export default function Home() {
                   className={
                     tier.amount === DONATE_SUGGESTED
                       ? `${donateButtonClass} flex-col gap-0.5 px-5 py-3`
-                      : "inline-flex flex-col items-center justify-center gap-0.5 rounded-full border-[1.5px] border-control px-5 py-3 font-semibold text-fg transition hover:border-coffeeDark hover:bg-coffee/15"
+                      : "inline-flex flex-col items-center justify-center gap-0.5 rounded-full bg-raised px-5 py-3 font-semibold text-fg transition hover:bg-coffee/25"
                   }
                 >
-                  <span className="text-[15px]">
+                  <span className="text-[16px]">
                     {tier.amount.toLocaleString("ja-JP")}円
                     {tier.amount === DONATE_SUGGESTED && (
-                      <span className="ml-1.5 text-[10px] font-medium">おすすめ</span>
+                      <span className="ml-1.5 text-[11px] font-medium">おすすめ</span>
                     )}
                   </span>
-                  <span className="text-[11px] font-normal opacity-80">{tier.note}</span>
+                  <span className="text-[12px] font-normal opacity-80">{tier.note}</span>
                 </a>
               ))}
             </div>
@@ -333,13 +303,13 @@ export default function Home() {
                 href={DONATE_CUSTOM_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-2 inline-flex w-full items-center justify-center rounded-full border-[1.5px] border-dashed border-control px-5 py-3 text-[13px] font-semibold text-fg transition hover:border-coffeeDark hover:bg-coffee/10 sm:w-auto"
+                className="mt-2.5 inline-flex w-full items-center justify-center rounded-full border border-dashed border-control px-5 py-3 text-[14px] font-semibold text-fg transition hover:border-coffeeDark hover:bg-coffee/15 sm:w-auto"
               >
                 自分で金額を決める（{DONATE_MIN}円〜{DONATE_MAX.toLocaleString("ja-JP")}円）
               </a>
             )}
             {DONATE_CUSTOM_URL && (
-              <p className="mt-2 text-[11px] leading-relaxed text-faint">
+              <p className="mt-2.5 text-[12px] leading-relaxed text-muted">
                 金額はStripeの決済ページで、{DONATE_STEP}円の個数を変えて決められます（例：個数20で{(DONATE_STEP * 20).toLocaleString("ja-JP")}円）。
                 {" "}
                 <a
@@ -353,7 +323,7 @@ export default function Home() {
                 こともできます。
               </p>
             )}
-            <p className="mt-3 text-[11px] leading-relaxed text-faint">
+            <p className="mt-3 text-[12px] leading-relaxed text-muted">
               決済はStripeのページで行われ、カード番号はこのサイトには届きません。チップは任意で、送らなくてもすべての機能を制限なく使えます。
             </p>
           </section>

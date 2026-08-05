@@ -54,7 +54,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#F1F4F8",
+  themeColor: "#F5F5F7",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -65,9 +65,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <body className="antialiased">
         {children}
-        <footer className="mt-14 border-t border-line bg-panel/80 py-7 backdrop-blur">
-          <div className="mx-auto flex max-w-[1400px] flex-wrap items-center gap-x-5 gap-y-2 px-4 text-[11px] text-faint">
-            <span className="flex items-center gap-2 text-[11px] font-medium text-muted">
+        <footer className="mt-16 border-t border-line py-8">
+          <div className="mx-auto flex max-w-[1120px] flex-wrap items-center gap-x-6 gap-y-3 px-4 text-[12px] text-faint sm:px-6">
+            <span className="flex items-center gap-2 text-[12px] font-medium text-muted">
               <LogoMark width={26} />
               ことばの方程式
             </span>

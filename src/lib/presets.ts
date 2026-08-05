@@ -2,6 +2,7 @@ import { COMPLEX_PRESETS } from "./complexPresets";
 import { LIFE_PRESETS } from "./lifePresets";
 import { PRESET_THEMES, THEME_PICK, type PresetTheme } from "./presetThemes";
 import { QUOTE_PRESETS } from "./quotePresets";
+import { SHELF_PRESETS } from "./shelfPresets";
 import type { FormulaElement } from "./types";
 
 export type PresetCategory =
@@ -618,6 +619,7 @@ const EVERYDAY_PRESETS: Preset[] = [
 export const PRESETS: Preset[] = [
   ...EVERYDAY_PRESETS,
   ...LIFE_PRESETS,
+  ...SHELF_PRESETS,
   ...QUOTE_PRESETS,
   ...COMPLEX_PRESETS,
 ];
@@ -740,6 +742,8 @@ export function dailyPresets(
   seed: string,
   count = DAILY_PRESET_COUNT,
   round = 0,
+  /** Limits the draw to one shelf of the stock. */
+  category?: PresetCategory,
 ): Preset[] {
   let state = hash(`${seed}#${round}`) || 1;
   const next = () => {
@@ -754,8 +758,17 @@ export function dailyPresets(
     }
     return list;
   };
-  const everyday = shuffled([...EVERYDAY_PRESETS, ...LIFE_PRESETS, ...PRESET_THEMES]);
-  const sayings = shuffled([...QUOTE_PRESETS, ...COMPLEX_PRESETS]);
+  const ofCategory = <T extends { category: PresetCategory }>(list: T[]) =>
+    category ? list.filter((item) => item.category === category) : list;
+  const everyday = shuffled(
+    ofCategory([
+      ...EVERYDAY_PRESETS,
+      ...LIFE_PRESETS,
+      ...SHELF_PRESETS,
+      ...PRESET_THEMES,
+    ]),
+  );
+  const sayings = shuffled(ofCategory([...QUOTE_PRESETS, ...COMPLEX_PRESETS]));
   // How much of the batch is sayings is itself drawn from the seed, so some
   // days open with mostly everyday equations and some with mostly quotes.
   const quoteShare = 20 + (next() % 61);
